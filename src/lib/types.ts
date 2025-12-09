@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export interface Database {
   public: {
     Tables: {
@@ -24,34 +32,34 @@ export interface Database {
       fund_sources: {
         Row: {
           id: number;
-          name: string;
+          source_name: string;
           created_at: string;
         };
         Insert: {
           id?: number;
-          name: string;
+          source_name: string;
           created_at?: string;
         };
         Update: {
           id?: number;
-          name?: string;
+          source_name?: string;
           created_at?: string;
         };
       };
       grant_years: {
         Row: {
           id: number;
-          year: number;
+          year_value: number;
           created_at: string;
         };
         Insert: {
           id?: number;
-          year: number;
+          year_value: number;
           created_at?: string;
         };
         Update: {
           id?: number;
-          year?: number;
+          year_value?: number;
           created_at?: string;
         };
       };
@@ -107,6 +115,18 @@ export interface Database {
           created_at?: string;
         };
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }

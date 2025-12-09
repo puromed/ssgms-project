@@ -41,8 +41,8 @@ export default function Grants() {
   const fetchFilterOptions = async () => {
     try {
       const [yearsResponse, fundSourcesResponse] = await Promise.all([
-        supabase.from('grant_years').select('*').order('year', { ascending: false }),
-        supabase.from('fund_sources').select('*').order('name'),
+        supabase.from('grant_years').select('*').order('year_value', { ascending: false }),
+        supabase.from('fund_sources').select('*').order('source_name'),
       ]);
 
       if (yearsResponse.data) setYears(yearsResponse.data);
@@ -97,8 +97,8 @@ export default function Grants() {
     const csvData = filteredGrants.map((grant) => [
       grant.project_name,
       grant.amount_approved.toFixed(2),
-      grant.grant_years?.year || 'N/A',
-      grant.fund_sources?.name || 'N/A',
+      grant.grant_years?.year_value || 'N/A',
+      grant.fund_sources?.source_name || 'N/A',
       grant.status,
     ]);
 
@@ -142,7 +142,10 @@ export default function Grants() {
             <span>Export CSV</span>
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setEditingGrant(null);
+              setShowModal(true);
+            }}
             className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
           >
             <Plus className="w-5 h-5" />
@@ -172,7 +175,7 @@ export default function Grants() {
               <option value="">All Years</option>
               {years.map((year) => (
                 <option key={year.id} value={year.id}>
-                  {year.year}
+                  {year.year_value}
                 </option>
               ))}
             </select>
@@ -184,7 +187,7 @@ export default function Grants() {
               <option value="">All Fund Sources</option>
               {fundSources.map((source) => (
                 <option key={source.id} value={source.id}>
-                  {source.name}
+                  {source.source_name}
                 </option>
               ))}
             </select>
@@ -234,26 +237,24 @@ export default function Grants() {
                       {formatCurrency(grant.amount_approved)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {grant.grant_years?.year || 'N/A'}
+                      {grant.grant_years?.year_value || 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {grant.fund_sources?.name || 'N/A'}
+                      {grant.fund_sources?.source_name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span
                         className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
-                          grant.status === 'Active'
+                          grant.status === 'approved'
                             ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20'
-                            : grant.status === 'Completed'
+                            : grant.status === 'completed'
                             ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-600/20'
-                            : grant.status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20'
-                            : grant.status === 'Ongoing'
+                            : grant.status === 'ongoing'
                             ? 'bg-orange-100 text-orange-800 ring-1 ring-orange-600/20'
                             : 'bg-slate-100 text-slate-700 ring-1 ring-slate-600/20'
                         }`}
                       >
-                        {grant.status}
+                        {grant.status.charAt(0).toUpperCase() + grant.status.slice(1)}
                       </span>
                     </td>
                     {profile?.role === 'admin' && (

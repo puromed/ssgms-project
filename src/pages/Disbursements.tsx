@@ -31,9 +31,9 @@ export default function Disbursements() {
         .order('project_name');
 
       if (error) throw error;
-      setGrants(data || []);
+      setGrants((data as GrantWithRelations[]) || []);
       if (data && data.length > 0) {
-        setSelectedGrant(data[0].id);
+        setSelectedGrant((data as GrantWithRelations[])[0].id);
       }
     } catch (error) {
       console.error('Error fetching grants:', error);
@@ -51,7 +51,7 @@ export default function Disbursements() {
         .order('payment_date', { ascending: false });
 
       if (error) throw error;
-      setDisbursements(data || []);
+      setDisbursements((data as Disbursement[]) || []);
     } catch (error) {
       console.error('Error fetching disbursements:', error);
     }
@@ -253,11 +253,11 @@ export default function Disbursements() {
               </div>
               <div class="detail-row">
                 <span class="detail-label">Fund Source:</span>
-                <span class="detail-value">${selectedGrantData.fund_sources?.name || 'N/A'}</span>
+                <span class="detail-value">${selectedGrantData.fund_sources?.source_name || 'N/A'}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Grant Year:</span>
-                <span class="detail-value">${selectedGrantData.grant_years?.year || 'N/A'}</span>
+                <span class="detail-value">${selectedGrantData.grant_years?.year_value || 'N/A'}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Status:</span>
@@ -265,7 +265,7 @@ export default function Disbursements() {
               </div>
             </div>
 
-            <p>This grant from <strong>${selectedGrantData.fund_sources?.name || 'N/A'}</strong> has been allocated to support your project objectives. We trust that these funds will be utilized effectively to achieve the intended outcomes.</p>
+            <p>This grant from <strong>${selectedGrantData.fund_sources?.source_name || 'N/A'}</strong> has been allocated to support your project objectives. We trust that these funds will be utilized effectively to achieve the intended outcomes.</p>
 
             <p><strong>Important Notes:</strong></p>
             <ul>

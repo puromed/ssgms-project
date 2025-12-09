@@ -16,7 +16,7 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
   const [formData, setFormData] = useState({
     project_name: '',
     amount_approved: '',
-    status: 'Active',
+    status: 'approved',
     year_id: '',
     fund_source_id: '',
   });
@@ -37,8 +37,8 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
   const fetchDropdownData = async () => {
     try {
       const [fundSourcesResponse, grantYearsResponse] = await Promise.all([
-        supabase.from('fund_sources').select('*').order('name'),
-        supabase.from('grant_years').select('*').order('year', { ascending: false }),
+        supabase.from('fund_sources').select('*').order('source_name'),
+        supabase.from('grant_years').select('*').order('year_value', { ascending: false }),
       ]);
 
       if (fundSourcesResponse.data) setFundSources(fundSourcesResponse.data);
@@ -65,19 +65,19 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
       if (editingGrant) {
         const result = await supabase
           .from('grants')
-          .update(grantData)
+          .update(grantData as any)
           .eq('id', editingGrant.id);
         error = result.error;
       } else {
-        const result = await supabase.from('grants').insert([grantData]);
+        const result = await supabase.from('grants').insert([grantData] as any);
         error = result.error;
       }
 
       if (error) throw error;
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving grant:', error);
-      alert(`Failed to ${editingGrant ? 'update' : 'create'} grant`);
+      alert(`Failed to ${editingGrant ? 'update' : 'create'} grant: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               <option value="">Select a year</option>
               {grantYears.map((year) => (
                 <option key={year.id} value={year.id}>
-                  {year.year}
+                  {year.year_value}
                 </option>
               ))}
             </select>
@@ -169,7 +169,7 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               <option value="">Select a fund source</option>
               {fundSources.map((source) => (
                 <option key={source.id} value={source.id}>
-                  {source.name}
+                  {source.source_name}
                 </option>
               ))}
             </select>
@@ -186,10 +186,9 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
             >
-              <option value="Active">Active</option>
-              <option value="Ongoing">Ongoing</option>
-              <option value="Completed">Completed</option>
-              <option value="Pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
             </select>
           </div>
 
