@@ -1,12 +1,15 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Grants from './pages/Grants';
 import Disbursements from './pages/Disbursements';
+import Team from './pages/Team';
 
 function App() {
   return (
@@ -45,11 +48,35 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/team"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminGuard>
+                    <Team />
+                  </AdminGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
   );
+}
+
+function AdminGuard({ children }: { children: ReactNode }) {
+  const { profile, loading } = useAuth();
+
+  if (loading) return null;
+
+  if (profile?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 export default App;
