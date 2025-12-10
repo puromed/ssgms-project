@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, Search, Download, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, getFundSourceBadgeClass } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import type { GrantWithRelations, FundSource, GrantYear } from '../lib/types';
 import NewGrantModal from '../components/NewGrantModal';
@@ -259,8 +259,13 @@ export default function Grants() {
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {grant.grant_years?.year_value || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {grant.fund_sources?.source_name || 'N/A'}
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getFundSourceBadgeClass(
+                          grant.fund_sources?.source_name,
+                        )}`}>
+                        {grant.fund_sources?.source_name || 'N/A'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span

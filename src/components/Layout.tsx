@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, DollarSign, LogOut, Menu, X, User } from 'lucide-react';
+import { LayoutDashboard, FileText, DollarSign, LogOut, Menu, X, User, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LayoutProps {
@@ -78,7 +78,13 @@ export default function Layout({ children }: LayoutProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-blue-800">
           <div className="mb-4 px-4">
             <p className="text-sm text-blue-200">Logged in as</p>
-            <p className="text-sm font-medium text-white truncate">{profile?.email}</p>
+            <Link
+              to="/profile"
+              onClick={() => setSidebarOpen(false)}
+              className="text-sm font-medium text-white truncate hover:underline"
+            >
+              {profile?.email}
+            </Link>
             <span
               className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded ${
                 profile?.role === 'admin'
@@ -89,13 +95,23 @@ export default function Layout({ children }: LayoutProps) {
               {profile?.role === 'admin' ? 'Admin' : 'Staff'}
             </span>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Sign Out</span>
-          </button>
+          <div className="flex gap-2">
+            <Link
+              to="/profile"
+              onClick={() => setSidebarOpen(false)}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg bg-blue-800/60 text-blue-50 hover:bg-blue-800 transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+              <span className="font-medium">Profile</span>
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Sign Out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
