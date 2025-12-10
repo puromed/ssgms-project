@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, ChevronDown, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency, formatDate } from '../lib/utils';
 import type { GrantWithRelations, Disbursement } from '../lib/types';
 import NewDisbursementModal from '../components/NewDisbursementModal';
+import TableSkeleton from '../components/TableSkeleton';
 
 export default function Disbursements() {
   const { profile } = useAuth();
@@ -68,23 +70,6 @@ export default function Disbursements() {
       console.error('Error deleting disbursement:', error);
       alert('Failed to delete disbursement');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   const selectedGrantData = grants.find((g) => g.id === selectedGrant);
@@ -301,8 +286,8 @@ export default function Disbursements() {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-slate-900">Disbursements</h1>
-        <div className="bg-white rounded-xl p-8 shadow-sm animate-pulse">
-          <div className="h-64 bg-slate-200 rounded"></div>
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-200">
+          <TableSkeleton rows={3} />
         </div>
       </div>
     );

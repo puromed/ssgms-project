@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, DollarSign, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, DollarSign, LogOut, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LayoutProps {
@@ -12,11 +12,16 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigation = [
+  const baseNavigation = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Grants', path: '/grants', icon: FileText },
     { name: 'Disbursements', path: '/disbursements', icon: DollarSign },
   ];
+
+  const navigation =
+    profile?.role === 'admin'
+      ? [...baseNavigation, { name: 'Team', path: '/team', icon: User }]
+      : baseNavigation;
 
   const handleSignOut = async () => {
     try {

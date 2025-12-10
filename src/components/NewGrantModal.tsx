@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import type { FundSource, GrantYear, GrantWithRelations } from '../lib/types';
 
@@ -74,10 +75,11 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
       }
 
       if (error) throw error;
+      toast.success(editingGrant ? 'Grant updated successfully' : 'Grant created successfully');
       onSuccess();
     } catch (error: any) {
       console.error('Error saving grant:', error);
-      alert(`Failed to ${editingGrant ? 'update' : 'create'} grant: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to ${editingGrant ? 'update' : 'create'} grant: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
