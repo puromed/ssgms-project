@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, ChevronDown, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency, formatDate } from '../lib/utils';
 import type { GrantWithRelations, Disbursement } from '../lib/types';
 import NewDisbursementModal from '../components/NewDisbursementModal';
 
@@ -68,23 +69,6 @@ export default function Disbursements() {
       console.error('Error deleting disbursement:', error);
       alert('Failed to delete disbursement');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   const selectedGrantData = grants.find((g) => g.id === selectedGrant);

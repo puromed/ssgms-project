@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Search, Download, Edit2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { formatCurrency, formatDate } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import type { GrantWithRelations, FundSource, GrantYear } from '../lib/types';
 import NewGrantModal from '../components/NewGrantModal';
@@ -59,19 +61,11 @@ export default function Grants() {
       const { error } = await supabase.from('grants').delete().eq('id', id);
       if (error) throw error;
       setGrants(grants.filter((grant) => grant.id !== id));
+      toast.success('Grant deleted successfully');
     } catch (error) {
       console.error('Error deleting grant:', error);
-      alert('Failed to delete grant');
+      toast.error('Failed to delete grant');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
   };
 
   const filteredGrants = grants.filter((grant) => {
@@ -213,6 +207,9 @@ export default function Grants() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  Last Updated
+                </th>
                 {profile?.role === 'admin' && (
                   <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Actions
@@ -256,6 +253,9 @@ export default function Grants() {
                       >
                         {grant.status.charAt(0).toUpperCase() + grant.status.slice(1)}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {formatDate(grant.created_at)}
                     </td>
                     {profile?.role === 'admin' && (
                       <td className="px-6 py-4 text-right">

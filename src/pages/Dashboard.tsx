@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DollarSign, TrendingUp, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/utils';
 import type { GrantWithRelations, Grant, Disbursement } from '../lib/types';
 
 interface DashboardStats {
@@ -81,15 +82,6 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-MY', {
-      style: 'currency',
-      currency: 'MYR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
   };
 
   if (loading) {
