@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -10,6 +11,7 @@ import Disbursements from './pages/Disbursements';
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />

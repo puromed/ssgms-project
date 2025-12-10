@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 
 interface NewDisbursementModalProps {
@@ -45,9 +46,11 @@ export default function NewDisbursementModal({
       ]);
 
       if (insertError) throw insertError;
+      toast.success('Disbursement created successfully');
       onSuccess();
     } catch (err) {
       console.error('Error creating disbursement:', err);
+      toast.error('Failed to create disbursement');
       setError('Failed to create disbursement');
     } finally {
       setLoading(false);
