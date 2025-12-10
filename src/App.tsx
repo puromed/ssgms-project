@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Grants from './pages/Grants';
 import Disbursements from './pages/Disbursements';
+import Team from './pages/Team';
 
 function App() {
   return (
@@ -41,6 +42,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Disbursements />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Team />
                 </Layout>
               </ProtectedRoute>
             }
