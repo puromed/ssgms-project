@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { GrantWithRelations, Disbursement } from '../lib/types';
 import NewDisbursementModal from '../components/NewDisbursementModal';
+import TableSkeleton from '../components/TableSkeleton';
 
 export default function Disbursements() {
   const { profile } = useAuth();
@@ -285,8 +286,8 @@ export default function Disbursements() {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-slate-900">Disbursements</h1>
-        <div className="bg-white rounded-xl p-8 shadow-sm animate-pulse">
-          <div className="h-64 bg-slate-200 rounded"></div>
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-200">
+          <TableSkeleton rows={3} />
         </div>
       </div>
     );

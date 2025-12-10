@@ -6,6 +6,8 @@ import { formatCurrency, formatDate } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import type { GrantWithRelations, FundSource, GrantYear } from '../lib/types';
 import NewGrantModal from '../components/NewGrantModal';
+import EmptyState from '../components/EmptyState';
+import TableSkeleton from '../components/TableSkeleton';
 
 export default function Grants() {
   const { profile } = useAuth();
@@ -116,8 +118,8 @@ export default function Grants() {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-slate-900">Grants</h1>
-        <div className="bg-white rounded-xl p-8 shadow-sm animate-pulse">
-          <div className="h-64 bg-slate-200 rounded"></div>
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-200">
+          <TableSkeleton rows={5} />
         </div>
       </div>
     );
@@ -188,44 +190,65 @@ export default function Grants() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                  Project Name
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                  Amount Approved
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                  Year
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                  Fund Source
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                  Last Updated
-                </th>
-                {profile?.role === 'admin' && (
-                  <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredGrants.length === 0 ? (
+        {/* Empty State Logic */}
+        {filteredGrants.length === 0 ? (
+          <div className="p-8">
+            <EmptyState
+              title="No grants found"
+              description={
+                searchTerm || selectedYear || selectedFundSource
+                  ? 'Try adjusting your filters to see results.'
+                  : 'Get started by creating your first grant application.'
+              }
+              action={
+                !searchTerm &&
+                !selectedYear &&
+                !selectedFundSource && (
+                  <button
+                    onClick={() => {
+                      setEditingGrant(null);
+                      setShowModal(true);
+                    }}
+                    className="bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
+                  >
+                    Create First Grant
+                  </button>
+                )
+              }
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <td colSpan={profile?.role === 'admin' ? 6 : 5} className="px-6 py-12 text-center">
-                    <p className="text-slate-500">No grants found</p>
-                  </td>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Project Name
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Amount Approved
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Year
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Fund Source
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Last Updated
+                  </th>
+                  {profile?.role === 'admin' && (
+                    <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  )}
                 </tr>
-              ) : (
-                filteredGrants.map((grant) => (
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {filteredGrants.map((grant) => (
                   <tr key={grant.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
                       {grant.project_name}
@@ -278,11 +301,11 @@ export default function Grants() {
                       </td>
                     )}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showModal && (
