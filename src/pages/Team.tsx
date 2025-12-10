@@ -29,12 +29,17 @@ export default function Team() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('email', { ascending: true });
 
-      if (error) throw error;
-      setProfiles(data || []);
+      if (error) {
+        console.error('Failed to load team members:', error);
+        throw error;
+      }
+      const collapsed = collapseProfiles(data || []);
+      setProfiles(collapsed);
     } catch (error) {
-      toast.error('Failed to load team members');
+      const message = error instanceof Error ? error.message : 'Failed to load team members';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -46,13 +51,15 @@ export default function Team() {
 
     try {
       // Check if user already exists
-      const { data: existing } = await supabase
+      const { data: existingRows, error: existingError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, status')
         .eq('email', inviteEmail)
-        .single();
+        .limit(1);
 
-      if (existing) {
+      if (existingError) throw existingError;
+
+      if (existingRows && existingRows.length > 0) {
         toast.error('User already exists in the system');
         return;
       }
@@ -82,6 +89,27 @@ export default function Team() {
     } finally {
       setIsInviting(false);
     }
+  };
+
+  const collapseProfiles = (list: Profile[]) => {
+    const byEmail = new Map<string, Profile>();
+
+    list.forEach((profile) => {
+      const key = profile.email.toLowerCase();
+      const existing = byEmail.get(key);
+
+      if (!existing) {
+        byEmail.set(key, profile);
+        return;
+      }
+
+      // Prefer active over invited; otherwise keep the first seen (already email-sorted)
+      if (existing.status !== 'active' && profile.status === 'active') {
+        byEmail.set(key, profile);
+      }
+    });
+
+    return Array.from(byEmail.values()).sort((a, b) => a.email.localeCompare(b.email));
   };
 
   if (loading) return <div className="p-8"><TableSkeleton rows={3} /></div>;

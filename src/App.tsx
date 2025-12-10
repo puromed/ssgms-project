@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -51,7 +53,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Team />
+                  <AdminGuard>
+                    <Team />
+                  </AdminGuard>
                 </Layout>
               </ProtectedRoute>
             }
@@ -61,6 +65,18 @@ function App() {
       </AuthProvider>
     </BrowserRouter>
   );
+}
+
+function AdminGuard({ children }: { children: ReactNode }) {
+  const { profile, loading } = useAuth();
+
+  if (loading) return null;
+
+  if (profile?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 export default App;

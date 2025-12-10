@@ -12,12 +12,16 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigation = [
+  const baseNavigation = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Grants', path: '/grants', icon: FileText },
     { name: 'Disbursements', path: '/disbursements', icon: DollarSign },
-    { name: 'Team', path: '/team', icon: User },
   ];
+
+  const navigation =
+    profile?.role === 'admin'
+      ? [...baseNavigation, { name: 'Team', path: '/team', icon: User }]
+      : baseNavigation;
 
   const handleSignOut = async () => {
     try {
