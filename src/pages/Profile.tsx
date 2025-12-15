@@ -18,7 +18,7 @@ export default function Profile() {
       if (error) throw error;
       toast.success('Password updated successfully');
       setPassword('');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update password');
     } finally {
       setLoading(false);

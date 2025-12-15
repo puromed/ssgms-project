@@ -34,6 +34,7 @@ export interface Database {
           status?: 'active' | 'invited';
           created_at?: string;
         };
+        Relationships: [];
       };
       fund_sources: {
         Row: {
@@ -51,6 +52,7 @@ export interface Database {
           source_name?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       grant_years: {
         Row: {
@@ -68,6 +70,7 @@ export interface Database {
           year_value?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       grants: {
         Row: {
@@ -97,6 +100,20 @@ export interface Database {
           fund_source_id?: number;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: 'grants_fund_source_id_fkey';
+            columns: ['fund_source_id'];
+            referencedRelation: 'fund_sources';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'grants_year_id_fkey';
+            columns: ['year_id'];
+            referencedRelation: 'grant_years';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       disbursements: {
         Row: {
@@ -120,6 +137,14 @@ export interface Database {
           payment_date?: string;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: 'disbursements_grant_id_fkey';
+            columns: ['grant_id'];
+            referencedRelation: 'grants';
+            referencedColumns: ['id'];
+          },
+        ];
       };
     };
     Views: {
@@ -144,10 +169,10 @@ export type Grant = Database['public']['Tables']['grants']['Row'];
 export type Disbursement = Database['public']['Tables']['disbursements']['Row'];
 
 export interface GrantWithRelations extends Grant {
-  fund_sources?: FundSource;
-  grant_years?: GrantYear;
+  fund_sources?: FundSource | null;
+  grant_years?: GrantYear | null;
 }
 
 export interface DisbursementWithGrant extends Disbursement {
-  grants?: Grant;
+  grants?: Grant | null;
 }

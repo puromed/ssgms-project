@@ -2,24 +2,16 @@ import { useEffect, useState } from 'react';
 import { Plus, Mail, Shield, User, CheckCircle, Clock, KeyRound, Copy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import type { Profile as ProfileRow } from '../lib/types';
 import TableSkeleton from '../components/TableSkeleton';
 
-type Profile = {
-  id: string;
-  email: string;
-  role: 'admin' | 'user';
-  status: 'active' | 'invited';
-  full_name?: string;
-  created_at: string;
-};
-
 export default function Team() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'user' | 'admin'>('user');
   const [isInviting, setIsInviting] = useState(false);
-  const [resettingProfile, setResettingProfile] = useState<Profile | null>(null);
+  const [resettingProfile, setResettingProfile] = useState<ProfileRow | null>(null);
   const [resetLink, setResetLink] = useState('');
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
@@ -86,7 +78,7 @@ export default function Team() {
       toast.success(`Invitation sent to ${inviteEmail}`);
       setInviteEmail('');
       fetchProfiles();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       toast.error('Failed to invite user');
     } finally {
@@ -94,8 +86,8 @@ export default function Team() {
     }
   };
 
-  const collapseProfiles = (list: Profile[]) => {
-    const byEmail = new Map<string, Profile>();
+  const collapseProfiles = (list: ProfileRow[]) => {
+    const byEmail = new Map<string, ProfileRow>();
 
     list.forEach((profile) => {
       const key = profile.email.toLowerCase();
@@ -107,7 +99,9 @@ export default function Team() {
       }
 
       // Prefer active over invited; otherwise keep the first seen (already email-sorted)
-      if (existing.status !== 'active' && profile.status === 'active') {
+      const existingStatus = existing.status ?? 'active';
+      const candidateStatus = profile.status ?? 'active';
+      if (existingStatus !== 'active' && candidateStatus === 'active') {
         byEmail.set(key, profile);
       }
     });
@@ -115,7 +109,7 @@ export default function Team() {
     return Array.from(byEmail.values()).sort((a, b) => a.email.localeCompare(b.email));
   };
 
-  const handleGenerateResetLink = async (profile: Profile) => {
+  const handleGenerateResetLink = async (profile: ProfileRow) => {
     setIsGeneratingLink(true);
     setResettingProfile(profile);
     setResetLink('');
@@ -131,9 +125,10 @@ export default function Team() {
       if (!actionLink) throw new Error('No reset link returned');
       setResetLink(actionLink);
       toast.success('Reset link generated');
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error?.message || 'Failed to generate reset link');
+      const message = error instanceof Error ? error.message : 'Failed to generate reset link';
+      toast.error(message);
       setResettingProfile(null);
       setResetLink('');
     } finally {
@@ -178,7 +173,7 @@ export default function Team() {
             <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
             <select
               value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as any)}
+              onChange={(e) => setInviteRole(e.target.value === 'admin' ? 'admin' : 'user')}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900"
             >
               <option value="user">Staff (User)</option>
@@ -226,17 +221,17 @@ export default function Team() {
                   <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     profile.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
                   }`}>
-                    {profile.status === 'active' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                    {profile.status.toUpperCase()}
+                    {(profile.status ?? 'active') === 'active' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                    {(profile.status ?? 'active').toUpperCase()}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button
                     type="button"
                     onClick={() => handleGenerateResetLink(profile)}
-                    disabled={profile.status !== 'active' || isGeneratingLink}
+                    disabled={(profile.status ?? 'active') !== 'active' || isGeneratingLink}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-900 text-white hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={profile.status !== 'active' ? 'User must be active to reset password' : 'Generate a password reset link'}
+                    title={(profile.status ?? 'active') !== 'active' ? 'User must be active to reset password' : 'Generate a password reset link'}
                   >
                     <KeyRound className="w-4 h-4" />
                     Reset Password
