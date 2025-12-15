@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -152,6 +152,14 @@ export default function Login() {
             {loading ? (isRegistering ? 'Creating Account...' : 'Signing in...') : (isRegistering ? 'Register' : 'Sign In')}
           </button>
         </form>
+
+        {!isRegistering && (
+          <div className="mt-4 text-center">
+            <Link to="/forgot-password" className="text-sm text-blue-900 hover:text-blue-700 font-medium">
+              Forgot password?
+            </Link>
+          </div>
+        )}
 
         <div className="mt-6 text-center">
           <button

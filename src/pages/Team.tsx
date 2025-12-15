@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Mail, Shield, User, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Mail, Shield, User, CheckCircle, Clock, KeyRound, Copy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import TableSkeleton from '../components/TableSkeleton';
@@ -19,6 +19,9 @@ export default function Team() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'user' | 'admin'>('user');
   const [isInviting, setIsInviting] = useState(false);
+  const [resettingProfile, setResettingProfile] = useState<Profile | null>(null);
+  const [resetLink, setResetLink] = useState('');
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
@@ -112,6 +115,41 @@ export default function Team() {
     return Array.from(byEmail.values()).sort((a, b) => a.email.localeCompare(b.email));
   };
 
+  const handleGenerateResetLink = async (profile: Profile) => {
+    setIsGeneratingLink(true);
+    setResettingProfile(profile);
+    setResetLink('');
+
+    try {
+      const redirectTo = `${window.location.origin}/update-password`;
+      const { data, error } = await supabase.functions.invoke('admin-generate-reset-link', {
+        body: { email: profile.email, redirectTo },
+      });
+
+      if (error) throw error;
+      const actionLink = (data as { actionLink?: string } | null)?.actionLink;
+      if (!actionLink) throw new Error('No reset link returned');
+      setResetLink(actionLink);
+      toast.success('Reset link generated');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || 'Failed to generate reset link');
+      setResettingProfile(null);
+      setResetLink('');
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleCopyResetLink = async () => {
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
   if (loading) return <div className="p-8"><TableSkeleton rows={3} /></div>;
 
   return (
@@ -166,6 +204,7 @@ export default function Team() {
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Member</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -191,11 +230,80 @@ export default function Team() {
                     {profile.status.toUpperCase()}
                   </span>
                 </td>
+                <td className="px-6 py-4 text-right">
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateResetLink(profile)}
+                    disabled={profile.status !== 'active' || isGeneratingLink}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-900 text-white hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={profile.status !== 'active' ? 'User must be active to reset password' : 'Generate a password reset link'}
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    Reset Password
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {resettingProfile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Password Reset Link</h2>
+                <p className="text-sm text-slate-600 mt-1">{resettingProfile.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setResettingProfile(null);
+                  setResetLink('');
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                Share this link with the user through your internal channel. It lets them set a new password without needing email delivery.
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <p className="text-xs text-slate-500 mb-2">Reset link</p>
+                <p className="text-sm text-slate-900 break-all">{resetLink || 'Generating...'}</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResettingProfile(null);
+                    setResetLink('');
+                  }}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyResetLink}
+                  disabled={!resetLink}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Link
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

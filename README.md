@@ -59,6 +59,20 @@ npm run typecheck
 ### Admin-only areas
 - The Team page is hidden for staff and additionally protected server-side via routing guard.
 
+### Password reset
+- Logged-in users can change their own password in `src/pages/Profile.tsx`.
+- “Forgot password” flow is available at `/forgot-password` (email-based recovery).
+- For prototype/internal usage where email delivery isn’t available, admins can generate a recovery link from the Team page (“Reset Password”) and share it to the user via internal channels.
+
+**Admin reset link (Supabase Edge Function)**
+- This requires deploying `supabase/functions/admin-generate-reset-link` and setting the `SUPABASE_SERVICE_ROLE_KEY` secret for the function (do not expose it in the frontend).
+- Example (Supabase CLI):
+  - `supabase functions deploy admin-generate-reset-link`
+  - `supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...`
+- Ensure your Supabase Auth “Additional Redirect URLs” includes:
+  - `http://localhost:5173/update-password`
+  - Your production domain `/update-password`
+
 ### Troubleshooting
 - Blank page on load: ensure `.env` is set and restart `npm run dev` so Vite picks up env vars.
 - Supabase errors: check the browser console for RLS/permission messages; adjust Supabase policies accordingly.
