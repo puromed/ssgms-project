@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DollarSign, TrendingUp, Wallet } from 'lucide-react';
 import {
@@ -58,6 +58,12 @@ interface RecentDisbursementRow {
   grants?: { project_name: string } | Array<{ project_name: string }>;
 }
 
+type KpiGrantRow = Pick<Grant, 'id' | 'project_name' | 'amount_approved' | 'created_at'> & {
+  fund_sources?: { source_name?: string };
+};
+
+type KpiDisbursementRow = Pick<Disbursement, 'grant_id' | 'amount' | 'payment_date'>;
+
 const STATUS_ORDER: Array<'approved' | 'ongoing' | 'completed'> = ['approved', 'ongoing', 'completed'];
 const STATUS_LABEL: Record<(typeof STATUS_ORDER)[number], string> = {
   approved: 'Approved',
@@ -70,6 +76,34 @@ const STATUS_COLORS: Record<(typeof STATUS_ORDER)[number], string> = {
   completed: '#1e3a8a',
 };
 
+const FUND_SOURCE_COLORS = [
+  '#1e3a8a',
+  '#0ea5e9',
+  '#059669',
+  '#f59e0b',
+  '#7c3aed',
+  '#ef4444',
+  '#14b8a6',
+  '#e11d48',
+  '#84cc16',
+  '#f97316',
+];
+
+const TOP_REMAINING_COLORS = ['#1e3a8a', '#0ea5e9', '#7c3aed', '#059669', '#f59e0b'];
+
+function makeColorMap(categories: string[], palette: string[]) {
+  const colors = palette.length > 0 ? palette : ['#1e3a8a'];
+  const unique = Array.from(new Set(categories.map((c) => c.trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b),
+  );
+
+  const map = new Map<string, string>();
+  unique.forEach((category, index) => {
+    map.set(category, colors[index % colors.length]);
+  });
+  return map;
+}
+
 function getMonthKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -77,16 +111,14 @@ function getMonthKey(date: Date) {
 }
 
 function getMonthLabel(date: Date) {
-  return new Intl.DateTimeFormat('en-MY', { month: 'short', year: '2-digit' }).format(date);
+  return new Intl.DateTimeFormat('en-MY', { month: 'short' }).format(date);
 }
 
-function buildLast12Months() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+function buildCalendarYearMonths(year: number) {
   const months: Array<{ key: string; label: string; budgetAdded: number; disbursed: number }> = [];
 
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+  for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+    const d = new Date(year, monthIndex, 1);
     months.push({
       key: getMonthKey(d),
       label: getMonthLabel(d),
@@ -110,11 +142,45 @@ export default function Dashboard() {
   const [topRemainingData, setTopRemainingData] = useState<TopRemainingPoint[]>([]);
   const [recentGrants, setRecentGrants] = useState<GrantWithRelations[]>([]);
   const [recentDisbursements, setRecentDisbursements] = useState<RecentDisbursementRow[]>([]);
+  const [chartGrants, setChartGrants] = useState<KpiGrantRow[]>([]);
+  const [chartDisbursements, setChartDisbursements] = useState<KpiDisbursementRow[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [loading, setLoading] = useState(true);
+
+  const fundSourceColorByName = useMemo(() => {
+    return makeColorMap(
+      fundSourceData.map((d) => String(d.name)),
+      FUND_SOURCE_COLORS,
+    );
+  }, [fundSourceData]);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    const months = buildCalendarYearMonths(selectedYear);
+    const monthsByKey = new Map(months.map((m) => [m.key, m]));
+
+    for (const grant of chartGrants) {
+      const createdAt = new Date(grant.created_at);
+      const key = getMonthKey(createdAt);
+      const bucket = monthsByKey.get(key);
+      if (bucket) bucket.budgetAdded += grant.amount_approved;
+    }
+
+    for (const d of chartDisbursements) {
+      const paymentDate = new Date(d.payment_date);
+      const key = getMonthKey(paymentDate);
+      const bucket = monthsByKey.get(key);
+      if (bucket) bucket.disbursed += d.amount;
+    }
+
+    setMonthlyData(
+      months.map((m) => ({ month: m.label, budgetAdded: m.budgetAdded, disbursed: m.disbursed })),
+    );
+  }, [chartDisbursements, chartGrants, selectedYear]);
 
   const fetchDashboardData = async () => {
     try {
@@ -137,12 +203,7 @@ export default function Dashboard() {
             .limit(5),
         ]);
 
-      const kpiGrants =
-        (kpiGrantsResponse.data as Array<
-          Pick<Grant, 'id' | 'project_name' | 'amount_approved' | 'created_at'> & {
-            fund_sources?: { source_name?: string };
-          }
-        >) ?? [];
+      const kpiGrants = (kpiGrantsResponse.data as KpiGrantRow[]) ?? [];
       const totalApproved = kpiGrants.reduce((sum, grant) => sum + grant.amount_approved, 0);
 
       const kpiGrantIds = kpiGrants.map((g) => g.id);
@@ -151,11 +212,10 @@ export default function Dashboard() {
             .from('disbursements')
             .select('grant_id, amount, payment_date')
             .in('grant_id', kpiGrantIds)
-        : { data: [] as Pick<Disbursement, 'grant_id' | 'amount'>[] };
+        : { data: [] as KpiDisbursementRow[] };
 
       const disbursedByGrantId = new Map<number, number>();
-      const kpiDisbursements =
-        (kpiDisbursementsResponse.data as Pick<Disbursement, 'grant_id' | 'amount' | 'payment_date'>[] ?? []);
+      const kpiDisbursements = (kpiDisbursementsResponse.data as KpiDisbursementRow[] ?? []);
       for (const disbursement of kpiDisbursements) {
         disbursedByGrantId.set(
           disbursement.grant_id,
@@ -175,33 +235,17 @@ export default function Dashboard() {
         remainingBalance,
       });
 
-      // Monthly (last 12 months): budget added vs disbursed
-      const months = buildLast12Months();
-      const monthsByKey = new Map(months.map((m) => [m.key, m]));
-      const minMonthKey = months[0]?.key;
-      const maxMonthKey = months[months.length - 1]?.key;
+      setChartGrants(kpiGrants);
+      setChartDisbursements(kpiDisbursements);
 
-      for (const grant of kpiGrants) {
-        const createdAt = new Date(grant.created_at);
-        const key = getMonthKey(createdAt);
-        if (minMonthKey && maxMonthKey && key >= minMonthKey && key <= maxMonthKey) {
-          const bucket = monthsByKey.get(key);
-          if (bucket) bucket.budgetAdded += grant.amount_approved;
-        }
-      }
+      const years = new Set<number>();
+      for (const grant of kpiGrants) years.add(new Date(grant.created_at).getFullYear());
+      for (const d of kpiDisbursements) years.add(new Date(d.payment_date).getFullYear());
+      years.add(new Date().getFullYear());
 
-      for (const d of kpiDisbursements) {
-        const paymentDate = new Date(d.payment_date);
-        const key = getMonthKey(paymentDate);
-        if (minMonthKey && maxMonthKey && key >= minMonthKey && key <= maxMonthKey) {
-          const bucket = monthsByKey.get(key);
-          if (bucket) bucket.disbursed += d.amount;
-        }
-      }
-
-      setMonthlyData(
-        months.map((m) => ({ month: m.label, budgetAdded: m.budgetAdded, disbursed: m.disbursed })),
-      );
+      const sortedYears = Array.from(years).sort((a, b) => b - a);
+      setAvailableYears(sortedYears);
+      setSelectedYear((prev) => (sortedYears.includes(prev) ? prev : (sortedYears[0] ?? prev)));
 
       // Grants by status (approved/ongoing/completed)
       const statusCounts = new Map<string, number>();
@@ -307,8 +351,28 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Budget vs Disbursed</h2>
-          <p className="text-sm text-slate-600 mb-6">Last 12 months (Approved + Ongoing)</p>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">Budget vs Disbursed</h2>
+              <p className="text-sm text-slate-600">Calendar year (Approved + Ongoing)</p>
+            </div>
+            {availableYears.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">Year</span>
+                <select
+                  value={String(selectedYear)}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                >
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyData}>
@@ -406,7 +470,14 @@ export default function Dashboard() {
                     borderRadius: '8px',
                   }}
                 />
-                <Bar dataKey="amount" name="Budget" fill="#1e3a8a" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="amount" name="Budget" radius={[8, 8, 0, 0]}>
+                  {fundSourceData.map((entry) => (
+                    <Cell
+                      key={String(entry.name)}
+                      fill={fundSourceColorByName.get(String(entry.name)) || FUND_SOURCE_COLORS[0]}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -433,7 +504,14 @@ export default function Dashboard() {
                     borderRadius: '8px',
                   }}
                 />
-                <Bar dataKey="remaining" name="Remaining" fill="#1e3a8a" radius={[0, 8, 8, 0]} />
+                <Bar dataKey="remaining" name="Remaining" radius={[0, 8, 8, 0]}>
+                  {topRemainingData.map((entry, index) => (
+                    <Cell
+                      key={String(entry.project)}
+                      fill={TOP_REMAINING_COLORS[index % TOP_REMAINING_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (

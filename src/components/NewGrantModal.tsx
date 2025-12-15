@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import type { FundSource, GrantYear, GrantWithRelations } from '../lib/types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface NewGrantModalProps {
   onClose: () => void;
@@ -11,6 +13,7 @@ interface NewGrantModalProps {
 }
 
 export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewGrantModalProps) {
+  const { profile } = useAuth();
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
   const [grantYears, setGrantYears] = useState<GrantYear[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,24 +65,20 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
         fund_source_id: parseInt(formData.fund_source_id),
       };
 
-      let error;
       if (editingGrant) {
-        const result = await supabase
-          .from('grants')
-          .update(grantData as any)
-          .eq('id', editingGrant.id);
-        error = result.error;
+        const { error } = await supabase.from('grants').update(grantData).eq('id', editingGrant.id);
+        if (error) throw error;
       } else {
-        const result = await supabase.from('grants').insert([grantData] as any);
-        error = result.error;
+        const { error } = await supabase.from('grants').insert([grantData]);
+        if (error) throw error;
       }
 
-      if (error) throw error;
       toast.success(editingGrant ? 'Grant updated successfully' : 'Grant created successfully');
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving grant:', error);
-      toast.error(`Failed to ${editingGrant ? 'update' : 'create'} grant: ${error.message || 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to ${editingGrant ? 'update' : 'create'} grant: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -155,12 +154,19 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
           </div>
 
           <div>
-            <label
-              htmlFor="fund_source_id"
-              className="block text-sm font-medium text-slate-700 mb-2"
-            >
-              Fund Source
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="fund_source_id" className="block text-sm font-medium text-slate-700">
+                Fund Source
+              </label>
+              {profile?.role === 'admin' && (
+                <Link
+                  to="/grant-sources"
+                  className="text-xs text-slate-500 hover:text-slate-700 underline"
+                >
+                  Manage sources
+                </Link>
+              )}
+            </div>
             <select
               id="fund_source_id"
               required

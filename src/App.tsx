@@ -11,6 +11,7 @@ import UpdatePassword from './pages/UpdatePassword';
 import Dashboard from './pages/Dashboard';
 import Grants from './pages/Grants';
 import Disbursements from './pages/Disbursements';
+import GrantSources from './pages/GrantSources';
 import Team from './pages/Team';
 import Profile from './pages/Profile';
 
@@ -49,6 +50,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Disbursements />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grant-sources"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <GrantSources />
                 </Layout>
               </ProtectedRoute>
             }
