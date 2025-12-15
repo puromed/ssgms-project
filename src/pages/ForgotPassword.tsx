@@ -17,8 +17,9 @@ export default function ForgotPassword() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
       toast.success('Password reset email sent. Check your inbox.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to send reset email');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send reset email';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

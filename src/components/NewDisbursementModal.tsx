@@ -42,7 +42,7 @@ export default function NewDisbursementModal({
           grant_id: grantId,
           amount: amount,
           payment_date: formData.payment_date,
-        } as any,
+        },
       ]);
 
       if (insertError) throw insertError;

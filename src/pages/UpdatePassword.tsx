@@ -46,8 +46,9 @@ export default function UpdatePassword() {
         } = await supabase.auth.getSession();
 
         setReady(Boolean(session?.user));
-      } catch (error: any) {
-        toast.error(error?.message || 'Invalid or expired reset link');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid or expired reset link';
+        toast.error(message);
         setReady(false);
       } finally {
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -69,8 +70,9 @@ export default function UpdatePassword() {
       toast.success('Password updated. Please sign in.');
       await supabase.auth.signOut();
       navigate('/login', { replace: true });
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update password');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update password';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -25,8 +25,9 @@ export default function Login() {
         await signIn(email, password);
         navigate('/');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to authenticate');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to authenticate';
+      setError(message);
     } finally {
       setLoading(false);
     }
