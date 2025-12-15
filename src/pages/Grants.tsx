@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Search, Download, Edit2 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, getFundSourceBadgeClass } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import type { GrantWithRelations, FundSource, GrantYear } from '../lib/types';
 import NewGrantModal from '../components/NewGrantModal';
@@ -11,6 +12,7 @@ import TableSkeleton from '../components/TableSkeleton';
 
 export default function Grants() {
   const { profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [grants, setGrants] = useState<GrantWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -25,6 +27,23 @@ export default function Grants() {
     fetchGrants();
     fetchFilterOptions();
   }, []);
+
+  const statusParam = (searchParams.get('status') || '').toLowerCase();
+  const allowedStatuses = new Set(['approved', 'ongoing', 'completed']);
+  const statusFilters = Array.from(
+    new Set(
+      statusParam
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => allowedStatuses.has(s)),
+    ),
+  );
+
+  const clearStatusFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('status');
+    setSearchParams(next);
+  };
 
   const fetchGrants = async () => {
     try {
@@ -74,7 +93,8 @@ export default function Grants() {
     const matchesSearch = grant.project_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesYear = !selectedYear || grant.year_id === parseInt(selectedYear);
     const matchesFundSource = !selectedFundSource || grant.fund_source_id === parseInt(selectedFundSource);
-    return matchesSearch && matchesYear && matchesFundSource;
+    const matchesStatus = statusFilters.length === 0 || statusFilters.includes(grant.status.toLowerCase());
+    return matchesSearch && matchesYear && matchesFundSource && matchesStatus;
   });
 
   const handleGrantCreated = () => {
@@ -128,7 +148,25 @@ export default function Grants() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold text-slate-900">Grants</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900">Grants</h1>
+          {statusFilters.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20">
+                Status: {statusFilters
+                  .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                  .join(', ')}
+              </span>
+              <button
+                type="button"
+                onClick={clearStatusFilter}
+                className="text-xs text-slate-500 hover:text-slate-700 underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
         <div className="flex gap-3">
           <button
             onClick={exportToCSV}
@@ -259,8 +297,13 @@ export default function Grants() {
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {grant.grant_years?.year_value || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {grant.fund_sources?.source_name || 'N/A'}
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getFundSourceBadgeClass(
+                          grant.fund_sources?.source_name,
+                        )}`}>
+                        {grant.fund_sources?.source_name || 'N/A'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span

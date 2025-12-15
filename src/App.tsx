@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Grants from './pages/Grants';
 import Disbursements from './pages/Disbursements';
 import Team from './pages/Team';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -56,6 +57,16 @@ function App() {
                   <AdminGuard>
                     <Team />
                   </AdminGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Profile />
                 </Layout>
               </ProtectedRoute>
             }
