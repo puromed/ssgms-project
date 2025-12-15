@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\\s+/i, '').trim();
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     if (!token) return json(401, { error: 'Missing Authorization bearer token' });
 
     const { email, redirectTo } = (await req.json()) as RequestBody;
@@ -74,4 +74,3 @@ Deno.serve(async (req) => {
     return json(500, { error: message });
   }
 });
-
