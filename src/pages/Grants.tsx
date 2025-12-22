@@ -1,39 +1,62 @@
-import { useEffect, useState } from 'react';
-import { Plus, Trash2, Search, Download, Edit2 } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { supabase } from '../lib/supabase';
-import { formatCurrency, formatDate, getFundSourceBadgeClass } from '../lib/utils';
-import { useAuth } from '../contexts/AuthContext';
-import type { GrantWithRelations, FundSource, GrantYear } from '../lib/types';
-import NewGrantModal from '../components/NewGrantModal';
-import EmptyState from '../components/EmptyState';
-import TableSkeleton from '../components/TableSkeleton';
+import { useEffect, useState } from "react";
+import { Plus, Trash2, Search, Download, Edit2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
+import { supabase } from "../lib/supabase";
+import {
+  formatCurrency,
+  formatDate,
+  getFundSourceBadgeClass,
+} from "../lib/utils";
+import { useAuth } from "../contexts/AuthContext";
+import type { GrantWithRelations, FundSource, GrantYear } from "../lib/types";
+import NewGrantModal from "../components/NewGrantModal";
+import EmptyState from "../components/EmptyState";
+import TableSkeleton from "../components/TableSkeleton";
+
+const MAX_PROJECT_NAME = 24;
+const STATUS_OPTIONS = [
+  { value: "approved", label: "Approved" },
+  { value: "ongoing", label: "Ongoing" },
+  { value: "completed", label: "Completed" },
+];
+
+function truncateLabel(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  const sliceLength = Math.max(0, maxLength - 3);
+  return `${value.slice(0, sliceLength)}...`;
+}
 
 export default function Grants() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [grants, setGrants] = useState<GrantWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedYear, setSelectedYear] = useState<string>('');
-  const [selectedFundSource, setSelectedFundSource] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedFundSource, setSelectedFundSource] = useState<string>("");
   const [years, setYears] = useState<GrantYear[]>([]);
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
-  const [editingGrant, setEditingGrant] = useState<GrantWithRelations | null>(null);
+  const [editingGrant, setEditingGrant] = useState<GrantWithRelations | null>(
+    null,
+  );
+  const [updatedByLookup, setUpdatedByLookup] = useState<
+    Record<string, string>
+  >({});
+  const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
 
   useEffect(() => {
     fetchGrants();
     fetchFilterOptions();
   }, []);
 
-  const statusParam = (searchParams.get('status') || '').toLowerCase();
-  const allowedStatuses = new Set(['approved', 'ongoing', 'completed']);
+  const statusParam = (searchParams.get("status") || "").toLowerCase();
+  const allowedStatuses = new Set(["approved", "ongoing", "completed"]);
   const statusFilters = Array.from(
     new Set(
       statusParam
-        .split(',')
+        .split(",")
         .map((s) => s.trim())
         .filter((s) => allowedStatuses.has(s)),
     ),
@@ -41,21 +64,57 @@ export default function Grants() {
 
   const clearStatusFilter = () => {
     const next = new URLSearchParams(searchParams);
-    next.delete('status');
+    next.delete("status");
     setSearchParams(next);
+  };
+
+  const syncUpdatedByProfiles = async (rows: GrantWithRelations[]) => {
+    const updatedByIds = Array.from(
+      new Set(
+        rows
+          .map((grant) => grant.user_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (updatedByIds.length === 0) {
+      setUpdatedByLookup({});
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", updatedByIds);
+
+      if (error) throw error;
+      const lookup =
+        data?.reduce<Record<string, string>>((acc, profileRow) => {
+          const displayName =
+            profileRow.full_name || profileRow.email || "Unknown";
+          acc[profileRow.id] = displayName;
+          return acc;
+        }, {}) || {};
+      setUpdatedByLookup(lookup);
+    } catch (error) {
+      console.error("Error fetching updated by profiles:", error);
+    }
   };
 
   const fetchGrants = async () => {
     try {
       const { data, error } = await supabase
-        .from('grants')
-        .select('*, fund_sources(*), grant_years(*)')
-        .order('created_at', { ascending: false });
+        .from("grants")
+        .select("*, fund_sources(*), grant_years(*)")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setGrants(data || []);
+      const rows = data || [];
+      setGrants(rows);
+      syncUpdatedByProfiles(rows);
     } catch (error) {
-      console.error('Error fetching grants:', error);
+      console.error("Error fetching grants:", error);
     } finally {
       setLoading(false);
     }
@@ -64,36 +123,91 @@ export default function Grants() {
   const fetchFilterOptions = async () => {
     try {
       const [yearsResponse, fundSourcesResponse] = await Promise.all([
-        supabase.from('grant_years').select('*').order('year_value', { ascending: false }),
-        supabase.from('fund_sources').select('*').order('source_name'),
+        supabase
+          .from("grant_years")
+          .select("*")
+          .order("year_value", { ascending: false }),
+        supabase.from("fund_sources").select("*").order("source_name"),
       ]);
 
       if (yearsResponse.data) setYears(yearsResponse.data);
       if (fundSourcesResponse.data) setFundSources(fundSourcesResponse.data);
     } catch (error) {
-      console.error('Error fetching filter options:', error);
+      console.error("Error fetching filter options:", error);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this grant?')) return;
+    if (!confirm("Are you sure you want to delete this grant?")) return;
 
     try {
-      const { error } = await supabase.from('grants').delete().eq('id', id);
+      const { error } = await supabase.from("grants").delete().eq("id", id);
       if (error) throw error;
       setGrants(grants.filter((grant) => grant.id !== id));
-      toast.success('Grant deleted successfully');
+      toast.success("Grant deleted successfully");
     } catch (error) {
-      console.error('Error deleting grant:', error);
-      toast.error('Failed to delete grant');
+      console.error("Error deleting grant:", error);
+      toast.error("Failed to delete grant");
+    }
+  };
+
+  const handleStatusChange = async (
+    grant: GrantWithRelations,
+    nextStatus: string,
+  ) => {
+    if (grant.status === nextStatus) return;
+    setStatusUpdating(grant.id);
+
+    const updates: {
+      status: string;
+      user_id?: string;
+    } = { status: nextStatus };
+
+    const actorId = user?.id ?? profile?.id;
+    if (actorId) {
+      updates.user_id = actorId;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("grants")
+        .update(updates)
+        .eq("id", grant.id);
+      if (error) throw error;
+
+      setGrants((prev) =>
+        prev.map((row) => (row.id === grant.id ? { ...row, ...updates } : row)),
+      );
+
+      if (updates.user_id && profile) {
+        const displayName = profile.full_name || profile.email || "Unknown";
+        setUpdatedByLookup((prev) => ({
+          ...prev,
+          [updates.user_id as string]: displayName,
+        }));
+      }
+
+      toast.success("Grant status updated");
+    } catch (error) {
+      console.error("Error updating grant status:", error);
+      toast.error("Failed to update grant status");
+    } finally {
+      setStatusUpdating(null);
     }
   };
 
   const filteredGrants = grants.filter((grant) => {
-    const matchesSearch = grant.project_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesYear = !selectedYear || grant.year_id === parseInt(selectedYear);
-    const matchesFundSource = !selectedFundSource || grant.fund_source_id === parseInt(selectedFundSource);
-    const matchesStatus = statusFilters.length === 0 || statusFilters.includes(grant.status.toLowerCase());
+    const matchesSearch = grant.project_name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesYear =
+      !selectedYear || grant.year_id === parseInt(selectedYear);
+    const matchesFundSource =
+      !selectedFundSource ||
+      grant.fund_source_id === parseInt(selectedFundSource);
+    const matchesStatus =
+      statusFilters.length === 0 ||
+      statusFilters.includes(grant.status.toLowerCase());
     return matchesSearch && matchesYear && matchesFundSource && matchesStatus;
   });
 
@@ -109,26 +223,35 @@ export default function Grants() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Project Name', 'Amount Approved (RM)', 'Year', 'Fund Source', 'Status'];
+    const headers = [
+      "Project Name",
+      "Amount Approved (RM)",
+      "Year",
+      "Fund Source",
+      "Status",
+    ];
     const csvData = filteredGrants.map((grant) => [
       grant.project_name,
       grant.amount_approved.toFixed(2),
-      grant.grant_years?.year_value || 'N/A',
-      grant.fund_sources?.source_name || 'N/A',
+      grant.grant_years?.year_value || "N/A",
+      grant.fund_sources?.source_name || "N/A",
       grant.status,
     ]);
 
     const csvContent = [
-      headers.join(','),
-      ...csvData.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
+      headers.join(","),
+      ...csvData.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `grants_export_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `grants_export_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -153,9 +276,10 @@ export default function Grants() {
           {statusFilters.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20">
-                Status: {statusFilters
+                Status:{" "}
+                {statusFilters
                   .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                  .join(', ')}
+                  .join(", ")}
               </span>
               <button
                 type="button"
@@ -235,8 +359,8 @@ export default function Grants() {
               title="No grants found"
               description={
                 searchTerm || selectedYear || selectedFundSource
-                  ? 'Try adjusting your filters to see results.'
-                  : 'Get started by creating your first grant application.'
+                  ? "Try adjusting your filters to see results."
+                  : "Get started by creating your first grant application."
               }
               action={
                 !searchTerm &&
@@ -276,9 +400,9 @@ export default function Grants() {
                     Status
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                    Last Updated
+                    Last Updated By
                   </th>
-                  {profile?.role === 'admin' && (
+                  {profile?.role === "admin" && (
                     <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Actions
                     </th>
@@ -287,43 +411,70 @@ export default function Grants() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredGrants.map((grant) => (
-                  <tr key={grant.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                      {grant.project_name}
+                  <tr
+                    key={grant.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    <td
+                      className="px-6 py-4 text-sm font-medium text-slate-900"
+                      title={grant.project_name}
+                    >
+                      {truncateLabel(grant.project_name, MAX_PROJECT_NAME)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {formatCurrency(grant.amount_approved)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {grant.grant_years?.year_value || 'N/A'}
+                      {grant.grant_years?.year_value || "N/A"}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getFundSourceBadgeClass(
                           grant.fund_sources?.source_name,
-                        )}`}>
-                        {grant.fund_sources?.source_name || 'N/A'}
+                        )}`}
+                      >
+                        {grant.fund_sources?.source_name || "N/A"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
-                          grant.status === 'approved'
-                            ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20'
-                            : grant.status === 'completed'
-                            ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-600/20'
-                            : grant.status === 'ongoing'
-                            ? 'bg-orange-100 text-orange-800 ring-1 ring-orange-600/20'
-                            : 'bg-slate-100 text-slate-700 ring-1 ring-slate-600/20'
-                        }`}
-                      >
-                        {grant.status.charAt(0).toUpperCase() + grant.status.slice(1)}
-                      </span>
+                      {profile?.role !== "user" ? (
+                        <span
+                          className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
+                            grant.status === "approved"
+                              ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20"
+                              : grant.status === "completed"
+                                ? "bg-blue-100 text-blue-800 ring-1 ring-blue-600/20"
+                                : grant.status === "ongoing"
+                                  ? "bg-orange-100 text-orange-800 ring-1 ring-orange-600/20"
+                                  : "bg-slate-100 text-slate-700 ring-1 ring-slate-600/20"
+                          }`}
+                        >
+                          {grant.status.charAt(0).toUpperCase() +
+                            grant.status.slice(1)}
+                        </span>
+                      ) : (
+                        <select
+                          value={grant.status}
+                          onChange={(e) =>
+                            handleStatusChange(grant, e.target.value)
+                          }
+                          disabled={statusUpdating === grant.id}
+                          className="w-full min-w-[140px] px-3 py-2 text-xs font-semibold border border-slate-300 rounded-full bg-white focus:ring-2 focus:ring-blue-900 focus:border-transparent disabled:opacity-60"
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">
-                      {formatDate(grant.created_at)}
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {grant.user_id
+                        ? updatedByLookup[grant.user_id] || "Unknown"
+                        : "N/A"}
                     </td>
-                    {profile?.role === 'admin' && (
+                    {profile?.role === "admin" && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
