@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { formatCurrency, getFundSourceBadgeClass } from '../lib/utils';
 import type { FundSource, Grant } from '../lib/types';
@@ -85,7 +86,7 @@ export default function GrantSources() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-900">Grant Sources</h1>
-        {profile?.role === 'admin' && (
+        {profile?.role === 'super_admin' && (
           <button
             type="button"
             onClick={() => setShowNewSourceModal(true)}
@@ -132,6 +133,11 @@ export default function GrantSources() {
                   <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Total Grant Amount
                   </th>
+                  {profile?.role === 'super_admin' && (
+                    <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -149,6 +155,38 @@ export default function GrantSources() {
                     <td className="px-6 py-4 text-sm font-semibold text-slate-900 text-right">
                       {formatCurrency(row.total_amount)}
                     </td>
+                    {profile?.role === 'super_admin' && (
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={async () => {
+                            if (
+                              !confirm(
+                                'Are you sure you want to delete this fund source? This may affect existing grants.',
+                              )
+                            )
+                              return;
+
+                            try {
+                              const { error } = await supabase
+                                .from('fund_sources')
+                                .delete()
+                                .eq('id', row.id);
+
+                              if (error) throw error;
+                              toast.success('Fund source deleted');
+                              setRows((prev) => prev.filter((r) => r.id !== row.id));
+                            } catch (error) {
+                              console.error('Error deleting fund source:', error);
+                              toast.error('Failed to delete fund source');
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="Delete fund source"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

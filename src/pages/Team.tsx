@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Mail, Shield, User, CheckCircle, Clock, KeyRound, Copy, X } from 'lucide-react';
+import { Plus, Mail, CheckCircle, Clock, KeyRound, Copy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import type { Profile as ProfileRow } from '../lib/types';
@@ -210,12 +210,46 @@ export default function Team() {
                   <div className="text-slate-500 text-sm">{profile.email}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    profile.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'
-                  }`}>
-                    {profile.role === 'admin' ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                    {profile.role.toUpperCase()}
-                  </span>
+                  <select
+                    value={profile.role}
+                    onChange={async (e) => {
+                      const newRole = e.target.value as 'user' | 'admin' | 'super_admin';
+                      const oldRole = profile.role;
+
+                      if (newRole === oldRole) return;
+
+                      // Optimistic update
+                      setProfiles((prev) =>
+                        prev.map((p) =>
+                          p.id === profile.id ? { ...p, role: newRole } : p,
+                        ),
+                      );
+
+                      try {
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({ role: newRole })
+                          .eq('id', profile.id);
+
+                        if (error) throw error;
+                        toast.success(`Role updated to ${newRole}`);
+                      } catch (error) {
+                        console.error('Error updating role:', error);
+                        toast.error('Failed to update role');
+                        // Revert
+                        setProfiles((prev) =>
+                          prev.map((p) =>
+                            p.id === profile.id ? { ...p, role: oldRole } : p,
+                          ),
+                        );
+                      }
+                    }}
+                    className="block w-full rounded-md border-0 py-1.5 pl-3 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-xs sm:leading-6"
+                  >
+                    <option value="user">USER</option>
+                    <option value="admin">ADMIN</option>
+                    <option value="super_admin">SUPER ADMIN</option>
+                  </select>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${

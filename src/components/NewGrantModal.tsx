@@ -64,7 +64,7 @@ export default function NewGrantModal({
     setLoading(true);
 
     try {
-      const grantData = {
+      const grantData: any = {
         project_name: formData.project_name,
         amount_approved: parseFloat(formData.amount_approved),
         status: formData.status,

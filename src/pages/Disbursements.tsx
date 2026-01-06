@@ -191,7 +191,7 @@ export default function Disbursements() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Amount
                 </th>
-                {profile?.role === "admin" && (
+                {profile?.role === "super_admin" && (
                   <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Actions
                   </th>
@@ -222,7 +222,7 @@ export default function Disbursements() {
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
                       {formatCurrency(disbursement.amount)}
                     </td>
-                    {profile?.role === "admin" && (
+                    {profile?.role === "super_admin" && (
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => handleDelete(disbursement.id)}

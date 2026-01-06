@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import {
   formatCurrency,
-  formatDate,
   getFundSourceBadgeClass,
 } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
@@ -402,7 +401,7 @@ export default function Grants() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Last Updated By
                   </th>
-                  {profile?.role === "admin" && (
+                  {(profile?.role === "admin" || profile?.role === "super_admin") && (
                     <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Actions
                     </th>
@@ -474,7 +473,7 @@ export default function Grants() {
                         ? updatedByLookup[grant.user_id] || "Unknown"
                         : "N/A"}
                     </td>
-                    {profile?.role === "admin" && (
+                    {(profile?.role === "admin" || profile?.role === "super_admin") && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -484,13 +483,15 @@ export default function Grants() {
                           >
                             <Edit2 className="w-5 h-5" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(grant.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            title="Delete grant"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          {profile?.role === "super_admin" && (
+                            <button
+                              onClick={() => handleDelete(grant.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                              title="Delete grant"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
