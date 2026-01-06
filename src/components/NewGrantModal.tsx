@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
-import type { FundSource, GrantYear, GrantWithRelations } from "../lib/types";
+import type { FundSource, GrantYear, GrantWithRelations, Database } from "../lib/types";
 import { useAuth } from "../contexts/AuthContext";
 
 interface NewGrantModalProps {
@@ -64,7 +64,7 @@ export default function NewGrantModal({
     setLoading(true);
 
     try {
-      const grantData: any = {
+      const grantData: Database['public']['Tables']['grants']['Insert'] = {
         project_name: formData.project_name,
         amount_approved: parseFloat(formData.amount_approved),
         status: formData.status,
