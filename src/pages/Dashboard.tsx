@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { DollarSign, TrendingUp, Wallet } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { DollarSign, TrendingUp, Wallet } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -15,10 +15,10 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts';
-import { supabase } from '../lib/supabase';
-import { formatCurrency, formatDate } from '../lib/utils';
-import type { Disbursement, Grant, GrantWithRelations } from '../lib/types';
+} from "recharts";
+import { supabase } from "../lib/supabase";
+import { formatCurrency, formatDate } from "../lib/utils";
+import type { Disbursement, Grant, GrantWithRelations } from "../lib/types";
 
 interface DashboardStats {
   totalApproved: number;
@@ -58,44 +58,76 @@ interface RecentDisbursementRow {
   grants?: { project_name: string } | Array<{ project_name: string }>;
 }
 
-type KpiGrantRow = Pick<Grant, 'id' | 'project_name' | 'amount_approved' | 'created_at'> & {
+type KpiGrantRow = Pick<
+  Grant,
+  "id" | "project_name" | "amount_approved" | "created_at"
+> & {
   fund_sources?: { source_name?: string };
 };
 
-type KpiDisbursementRow = Pick<Disbursement, 'grant_id' | 'amount' | 'payment_date'>;
+type KpiDisbursementRow = Pick<
+  Disbursement,
+  "grant_id" | "amount" | "payment_date"
+>;
 
-const STATUS_ORDER: Array<'approved' | 'ongoing' | 'completed'> = ['approved', 'ongoing', 'completed'];
+const STATUS_ORDER: Array<"approved" | "ongoing" | "completed"> = [
+  "approved",
+  "ongoing",
+  "completed",
+];
 const STATUS_LABEL: Record<(typeof STATUS_ORDER)[number], string> = {
-  approved: 'Approved',
-  ongoing: 'Ongoing',
-  completed: 'Completed',
+  approved: "Approved",
+  ongoing: "Ongoing",
+  completed: "Completed",
 };
 const STATUS_COLORS: Record<(typeof STATUS_ORDER)[number], string> = {
-  approved: '#059669',
-  ongoing: '#f59e0b',
-  completed: '#1e3a8a',
+  approved: "#059669",
+  ongoing: "#f59e0b",
+  completed: "#1e3a8a",
 };
 
 const FUND_SOURCE_COLORS = [
-  '#1e3a8a',
-  '#0ea5e9',
-  '#059669',
-  '#f59e0b',
-  '#7c3aed',
-  '#ef4444',
-  '#14b8a6',
-  '#e11d48',
-  '#84cc16',
-  '#f97316',
+  "#1e3a8a",
+  "#0ea5e9",
+  "#059669",
+  "#f59e0b",
+  "#7c3aed",
+  "#ef4444",
+  "#14b8a6",
+  "#e11d48",
+  "#84cc16",
+  "#f97316",
 ];
 
-const TOP_REMAINING_COLORS = ['#1e3a8a', '#0ea5e9', '#7c3aed', '#059669', '#f59e0b'];
+const TOP_REMAINING_COLORS = [
+  "#1e3a8a",
+  "#0ea5e9",
+  "#7c3aed",
+  "#059669",
+  "#f59e0b",
+];
+const MAX_FUND_SOURCE_LABEL = 16;
+const MAX_PROJECT_LABEL = 18;
+
+function truncateLabel(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  const sliceLength = Math.max(0, maxLength - 3);
+  return `${value.slice(0, sliceLength)}...`;
+}
+
+function formatCompactNumber(value: number) {
+  return new Intl.NumberFormat("en-MY", {
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
 
 function makeColorMap(categories: string[], palette: string[]) {
-  const colors = palette.length > 0 ? palette : ['#1e3a8a'];
-  const unique = Array.from(new Set(categories.map((c) => c.trim()).filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  const colors = palette.length > 0 ? palette : ["#1e3a8a"];
+  const unique = Array.from(
+    new Set(categories.map((c) => c.trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
 
   const map = new Map<string, string>();
   unique.forEach((category, index) => {
@@ -106,16 +138,21 @@ function makeColorMap(categories: string[], palette: string[]) {
 
 function getMonthKey(date: Date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 }
 
 function getMonthLabel(date: Date) {
-  return new Intl.DateTimeFormat('en-MY', { month: 'short' }).format(date);
+  return new Intl.DateTimeFormat("en-MY", { month: "short" }).format(date);
 }
 
 function buildCalendarYearMonths(year: number) {
-  const months: Array<{ key: string; label: string; budgetAdded: number; disbursed: number }> = [];
+  const months: Array<{
+    key: string;
+    label: string;
+    budgetAdded: number;
+    disbursed: number;
+  }> = [];
 
   for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
     const d = new Date(year, monthIndex, 1);
@@ -139,13 +176,21 @@ export default function Dashboard() {
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [statusData, setStatusData] = useState<StatusSlice[]>([]);
   const [fundSourceData, setFundSourceData] = useState<FundSourcePoint[]>([]);
-  const [topRemainingData, setTopRemainingData] = useState<TopRemainingPoint[]>([]);
+  const [topRemainingData, setTopRemainingData] = useState<TopRemainingPoint[]>(
+    [],
+  );
   const [recentGrants, setRecentGrants] = useState<GrantWithRelations[]>([]);
-  const [recentDisbursements, setRecentDisbursements] = useState<RecentDisbursementRow[]>([]);
+  const [recentDisbursements, setRecentDisbursements] = useState<
+    RecentDisbursementRow[]
+  >([]);
   const [chartGrants, setChartGrants] = useState<KpiGrantRow[]>([]);
-  const [chartDisbursements, setChartDisbursements] = useState<KpiDisbursementRow[]>([]);
+  const [chartDisbursements, setChartDisbursements] = useState<
+    KpiDisbursementRow[]
+  >([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number>(() =>
+    new Date().getFullYear(),
+  );
   const [loading, setLoading] = useState(true);
 
   const fundSourceColorByName = useMemo(() => {
@@ -178,54 +223,77 @@ export default function Dashboard() {
     }
 
     setMonthlyData(
-      months.map((m) => ({ month: m.label, budgetAdded: m.budgetAdded, disbursed: m.disbursed })),
+      months.map((m) => ({
+        month: m.label,
+        budgetAdded: m.budgetAdded,
+        disbursed: m.disbursed,
+      })),
     );
   }, [chartDisbursements, chartGrants, selectedYear]);
 
   const fetchDashboardData = async () => {
     try {
-      const [kpiGrantsResponse, statusCountsResponse, recentGrantsResponse, recentDisbursementsResponse] =
-        await Promise.all([
-          supabase
-            .from('grants')
-            .select('id, project_name, amount_approved, created_at, fund_sources(source_name)')
-            .in('status', ['approved', 'ongoing']),
-          supabase.from('grants').select('status').in('status', ['approved', 'ongoing', 'completed']),
+      const [
+        kpiGrantsResponse,
+        statusCountsResponse,
+        recentGrantsResponse,
+        recentDisbursementsResponse,
+      ] = await Promise.all([
         supabase
-          .from('grants')
-          .select('*, fund_sources(*), grant_years(*)')
-          .order('created_at', { ascending: false })
+          .from("grants")
+          .select(
+            "id, project_name, amount_approved, created_at, fund_sources(source_name)",
+          )
+          .in("status", ["approved", "ongoing"]),
+        supabase
+          .from("grants")
+          .select("status")
+          .in("status", ["approved", "ongoing", "completed"]),
+        supabase
+          .from("grants")
+          .select("*, fund_sources(*), grant_years(*)")
+          .order("created_at", { ascending: false })
           .limit(5),
-          supabase
-            .from('disbursements')
-            .select('id, amount, payment_date, grants(project_name)')
-            .order('payment_date', { ascending: false })
-            .limit(5),
-        ]);
+        supabase
+          .from("disbursements")
+          .select("id, amount, payment_date, grants(project_name)")
+          .order("payment_date", { ascending: false })
+          .limit(5),
+      ]);
 
       const kpiGrants = (kpiGrantsResponse.data as KpiGrantRow[]) ?? [];
-      const totalApproved = kpiGrants.reduce((sum, grant) => sum + grant.amount_approved, 0);
+      const totalApproved = kpiGrants.reduce(
+        (sum, grant) => sum + grant.amount_approved,
+        0,
+      );
 
       const kpiGrantIds = kpiGrants.map((g) => g.id);
       const kpiDisbursementsResponse = kpiGrantIds.length
         ? await supabase
-            .from('disbursements')
-            .select('grant_id, amount, payment_date')
-            .in('grant_id', kpiGrantIds)
+            .from("disbursements")
+            .select("grant_id, amount, payment_date")
+            .in("grant_id", kpiGrantIds)
         : { data: [] as KpiDisbursementRow[] };
 
       const disbursedByGrantId = new Map<number, number>();
-      const kpiDisbursements = (kpiDisbursementsResponse.data as KpiDisbursementRow[] ?? []);
+      const kpiDisbursements =
+        (kpiDisbursementsResponse.data as KpiDisbursementRow[]) ?? [];
       for (const disbursement of kpiDisbursements) {
         disbursedByGrantId.set(
           disbursement.grant_id,
-          (disbursedByGrantId.get(disbursement.grant_id) || 0) + disbursement.amount,
+          (disbursedByGrantId.get(disbursement.grant_id) || 0) +
+            disbursement.amount,
         );
       }
 
-      const totalDisbursed = kpiDisbursements.reduce((sum, d) => sum + d.amount, 0);
+      const totalDisbursed = kpiDisbursements.reduce(
+        (sum, d) => sum + d.amount,
+        0,
+      );
       const remainingBalance = kpiGrants.reduce(
-        (sum, grant) => sum + (grant.amount_approved - (disbursedByGrantId.get(grant.id) || 0)),
+        (sum, grant) =>
+          sum +
+          (grant.amount_approved - (disbursedByGrantId.get(grant.id) || 0)),
         0,
       );
 
@@ -239,18 +307,24 @@ export default function Dashboard() {
       setChartDisbursements(kpiDisbursements);
 
       const years = new Set<number>();
-      for (const grant of kpiGrants) years.add(new Date(grant.created_at).getFullYear());
-      for (const d of kpiDisbursements) years.add(new Date(d.payment_date).getFullYear());
+      for (const grant of kpiGrants)
+        years.add(new Date(grant.created_at).getFullYear());
+      for (const d of kpiDisbursements)
+        years.add(new Date(d.payment_date).getFullYear());
       years.add(new Date().getFullYear());
 
       const sortedYears = Array.from(years).sort((a, b) => b - a);
       setAvailableYears(sortedYears);
-      setSelectedYear((prev) => (sortedYears.includes(prev) ? prev : (sortedYears[0] ?? prev)));
+      setSelectedYear((prev) =>
+        sortedYears.includes(prev) ? prev : (sortedYears[0] ?? prev),
+      );
 
       // Grants by status (approved/ongoing/completed)
       const statusCounts = new Map<string, number>();
-      (statusCountsResponse.data as Array<Pick<Grant, 'status'>> | null)?.forEach((row) => {
-        const status = (row.status || '').toLowerCase();
+      (
+        statusCountsResponse.data as Array<Pick<Grant, "status">> | null
+      )?.forEach((row) => {
+        const status = (row.status || "").toLowerCase();
         statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
       });
       setStatusData(
@@ -263,8 +337,11 @@ export default function Dashboard() {
       // Budget by fund source (approved+ongoing)
       const budgetBySource = new Map<string, number>();
       for (const grant of kpiGrants) {
-        const source = grant.fund_sources?.source_name || 'Unknown';
-        budgetBySource.set(source, (budgetBySource.get(source) || 0) + grant.amount_approved);
+        const source = grant.fund_sources?.source_name || "Unknown";
+        budgetBySource.set(
+          source,
+          (budgetBySource.get(source) || 0) + grant.amount_approved,
+        );
       }
       setFundSourceData(
         Array.from(budgetBySource.entries())
@@ -277,16 +354,19 @@ export default function Dashboard() {
         kpiGrants
           .map((grant) => ({
             project: grant.project_name,
-            remaining: grant.amount_approved - (disbursedByGrantId.get(grant.id) || 0),
+            remaining:
+              grant.amount_approved - (disbursedByGrantId.get(grant.id) || 0),
           }))
           .sort((a, b) => b.remaining - a.remaining)
           .slice(0, 5),
       );
 
       setRecentGrants(recentGrantsResponse.data || []);
-      setRecentDisbursements((recentDisbursementsResponse.data as RecentDisbursementRow[]) || []);
+      setRecentDisbursements(
+        (recentDisbursementsResponse.data as RecentDisbursementRow[]) || [],
+      );
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -298,7 +378,10 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-xl p-6 shadow-sm animate-pulse">
+            <div
+              key={i}
+              className="bg-white rounded-xl p-6 shadow-sm animate-pulse"
+            >
               <div className="h-24 bg-slate-200 rounded"></div>
             </div>
           ))}
@@ -322,8 +405,12 @@ export default function Dashboard() {
               <TrendingUp className="w-6 h-6 text-emerald-600" />
             </div>
           </div>
-          <h3 className="text-slate-600 text-sm font-medium mb-1">Total Budget (Approved + Ongoing)</h3>
-          <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.totalApproved)}</p>
+          <h3 className="text-slate-600 text-sm font-medium mb-1">
+            Total Budget (Approved + Ongoing)
+          </h3>
+          <p className="text-3xl font-bold text-slate-900">
+            {formatCurrency(stats.totalApproved)}
+          </p>
         </Link>
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-t-4 border-t-blue-500 hover:shadow-md transition-shadow">
@@ -332,8 +419,12 @@ export default function Dashboard() {
               <DollarSign className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <h3 className="text-slate-600 text-sm font-medium mb-1">Total Disbursed (Approved + Ongoing)</h3>
-          <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.totalDisbursed)}</p>
+          <h3 className="text-slate-600 text-sm font-medium mb-1">
+            Total Disbursed (Approved + Ongoing)
+          </h3>
+          <p className="text-3xl font-bold text-slate-900">
+            {formatCurrency(stats.totalDisbursed)}
+          </p>
         </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-t-4 border-t-blue-500 hover:shadow-md transition-shadow">
@@ -342,7 +433,9 @@ export default function Dashboard() {
               <Wallet className="w-6 h-6 text-amber-600" />
             </div>
           </div>
-          <h3 className="text-slate-600 text-sm font-medium mb-1">Remaining Balance (Approved + Ongoing)</h3>
+          <h3 className="text-slate-600 text-sm font-medium mb-1">
+            Remaining Balance (Approved + Ongoing)
+          </h3>
           <p className="text-3xl font-bold text-slate-900">
             {formatCurrency(stats.remainingBalance)}
           </p>
@@ -353,8 +446,12 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Budget vs Disbursed</h2>
-              <p className="text-sm text-slate-600">Calendar year (Approved + Ongoing)</p>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">
+                Budget vs Disbursed
+              </h2>
+              <p className="text-sm text-slate-600">
+                Calendar year (Approved + Ongoing)
+              </p>
             </div>
             {availableYears.length > 0 && (
               <div className="flex items-center gap-2">
@@ -382,9 +479,9 @@ export default function Dashboard() {
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value))}
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
+                    backgroundColor: "#fff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
                   }}
                 />
                 <Legend />
@@ -414,8 +511,12 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Grants by Status</h2>
-          <p className="text-sm text-slate-600 mb-6">Approved, Ongoing, Completed</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">
+            Grants by Status
+          </h2>
+          <p className="text-sm text-slate-600 mb-6">
+            Approved, Ongoing, Completed
+          </p>
           {statusData.reduce((sum, s) => sum + s.value, 0) > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -430,17 +531,18 @@ export default function Dashboard() {
                   paddingAngle={3}
                 >
                   {statusData.map((slice) => {
-                    const key = slice.name.toLowerCase() as (typeof STATUS_ORDER)[number];
-                    const fill = STATUS_COLORS[key] || '#1e3a8a';
+                    const key =
+                      slice.name.toLowerCase() as (typeof STATUS_ORDER)[number];
+                    const fill = STATUS_COLORS[key] || "#1e3a8a";
                     return <Cell key={slice.name} fill={fill} />;
                   })}
                 </Pie>
                 <Tooltip
                   formatter={(value) => String(value)}
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
+                    backgroundColor: "#fff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
                   }}
                 />
                 <Legend />
@@ -454,27 +556,44 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Budget by Fund Source</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">
+            Budget by Fund Source
+          </h2>
           <p className="text-sm text-slate-600 mb-6">Approved + Ongoing</p>
           {fundSourceData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={fundSourceData}>
+              <BarChart data={fundSourceData} margin={{ left: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#64748b" interval={0} tick={{ fontSize: 12 }} />
-                <YAxis stroke="#64748b" />
+                <XAxis
+                  dataKey="name"
+                  stroke="#64748b"
+                  interval={0}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) =>
+                    truncateLabel(String(value), MAX_FUND_SOURCE_LABEL)
+                  }
+                />
+                <YAxis
+                  stroke="#64748b"
+                  width={56}
+                  tickFormatter={(value) => formatCompactNumber(Number(value))}
+                />
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value))}
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
+                    backgroundColor: "#fff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
                   }}
                 />
                 <Bar dataKey="amount" name="Budget" radius={[8, 8, 0, 0]}>
                   {fundSourceData.map((entry) => (
                     <Cell
                       key={String(entry.name)}
-                      fill={fundSourceColorByName.get(String(entry.name)) || FUND_SOURCE_COLORS[0]}
+                      fill={
+                        fundSourceColorByName.get(String(entry.name)) ||
+                        FUND_SOURCE_COLORS[0]
+                      }
                     />
                   ))}
                 </Bar>
@@ -488,27 +607,45 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Top 5 by Remaining</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">
+            Top 5 by Remaining
+          </h2>
           <p className="text-sm text-slate-600 mb-6">Approved + Ongoing</p>
           {topRemainingData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topRemainingData} layout="vertical" margin={{ left: 24 }}>
+              <BarChart
+                data={topRemainingData}
+                layout="vertical"
+                margin={{ left: 24 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" stroke="#64748b" />
-                <YAxis dataKey="project" type="category" stroke="#64748b" width={150} />
+                <YAxis
+                  dataKey="project"
+                  type="category"
+                  stroke="#64748b"
+                  width={150}
+                  tickFormatter={(value) =>
+                    truncateLabel(String(value), MAX_PROJECT_LABEL)
+                  }
+                />
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value))}
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
+                    backgroundColor: "#fff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
                   }}
                 />
                 <Bar dataKey="remaining" name="Remaining" radius={[0, 8, 8, 0]}>
                   {topRemainingData.map((entry, index) => (
                     <Cell
                       key={String(entry.project)}
-                      fill={TOP_REMAINING_COLORS[index % TOP_REMAINING_COLORS.length]}
+                      fill={
+                        TOP_REMAINING_COLORS[
+                          index % TOP_REMAINING_COLORS.length
+                        ]
+                      }
                     />
                   ))}
                 </Bar>
@@ -551,7 +688,10 @@ export default function Dashboard() {
                   </tr>
                 ) : (
                   recentGrants.map((grant) => (
-                    <tr key={grant.id} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={grant.id}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
                       <td className="px-6 py-4 text-sm font-medium text-slate-900">
                         {grant.project_name}
                       </td>
@@ -561,16 +701,17 @@ export default function Dashboard() {
                       <td className="px-6 py-4 text-sm">
                         <span
                           className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                            grant.status === 'approved'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : grant.status === 'completed'
-                              ? 'bg-blue-100 text-blue-800'
-                              : grant.status === 'ongoing'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-slate-100 text-slate-700'
+                            grant.status === "approved"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : grant.status === "completed"
+                                ? "bg-blue-100 text-blue-800"
+                                : grant.status === "ongoing"
+                                  ? "bg-orange-100 text-orange-800"
+                                  : "bg-slate-100 text-slate-700"
                           }`}
                         >
-                          {grant.status.charAt(0).toUpperCase() + grant.status.slice(1)}
+                          {grant.status.charAt(0).toUpperCase() +
+                            grant.status.slice(1)}
                         </span>
                       </td>
                     </tr>
@@ -583,7 +724,9 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">Recent Disbursements</h2>
+            <h2 className="text-xl font-bold text-slate-900">
+              Recent Disbursements
+            </h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -609,10 +752,14 @@ export default function Dashboard() {
                   </tr>
                 ) : (
                   recentDisbursements.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={d.id}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
                       <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                        {(Array.isArray(d.grants) ? d.grants[0]?.project_name : d.grants?.project_name) ||
-                          'N/A'}
+                        {(Array.isArray(d.grants)
+                          ? d.grants[0]?.project_name
+                          : d.grants?.project_name) || "N/A"}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
                         {formatCurrency(d.amount)}

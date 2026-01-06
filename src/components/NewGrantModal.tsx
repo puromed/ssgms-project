@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { X } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { supabase } from '../lib/supabase';
-import type { FundSource, GrantYear, GrantWithRelations } from '../lib/types';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { X } from "lucide-react";
+import toast from "react-hot-toast";
+import { supabase } from "../lib/supabase";
+import type { FundSource, GrantYear, GrantWithRelations } from "../lib/types";
+import { useAuth } from "../contexts/AuthContext";
 
 interface NewGrantModalProps {
   onClose: () => void;
@@ -12,17 +12,21 @@ interface NewGrantModalProps {
   editingGrant?: GrantWithRelations | null;
 }
 
-export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewGrantModalProps) {
-  const { profile } = useAuth();
+export default function NewGrantModal({
+  onClose,
+  onSuccess,
+  editingGrant,
+}: NewGrantModalProps) {
+  const { profile, user } = useAuth();
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
   const [grantYears, setGrantYears] = useState<GrantYear[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    project_name: '',
-    amount_approved: '',
-    status: 'approved',
-    year_id: '',
-    fund_source_id: '',
+    project_name: "",
+    amount_approved: "",
+    status: "approved",
+    year_id: "",
+    fund_source_id: "",
   });
 
   useEffect(() => {
@@ -41,14 +45,17 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
   const fetchDropdownData = async () => {
     try {
       const [fundSourcesResponse, grantYearsResponse] = await Promise.all([
-        supabase.from('fund_sources').select('*').order('source_name'),
-        supabase.from('grant_years').select('*').order('year_value', { ascending: false }),
+        supabase.from("fund_sources").select("*").order("source_name"),
+        supabase
+          .from("grant_years")
+          .select("*")
+          .order("year_value", { ascending: false }),
       ]);
 
       if (fundSourcesResponse.data) setFundSources(fundSourcesResponse.data);
       if (grantYearsResponse.data) setGrantYears(grantYearsResponse.data);
     } catch (error) {
-      console.error('Error fetching dropdown data:', error);
+      console.error("Error fetching dropdown data:", error);
     }
   };
 
@@ -64,21 +71,34 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
         year_id: parseInt(formData.year_id),
         fund_source_id: parseInt(formData.fund_source_id),
       };
+      const actorId = user?.id ?? profile?.id;
+      if (actorId) {
+        grantData.user_id = actorId;
+      }
 
       if (editingGrant) {
-        const { error } = await supabase.from('grants').update(grantData).eq('id', editingGrant.id);
+        const { error } = await supabase
+          .from("grants")
+          .update(grantData)
+          .eq("id", editingGrant.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('grants').insert([grantData]);
+        const { error } = await supabase.from("grants").insert([grantData]);
         if (error) throw error;
       }
 
-      toast.success(editingGrant ? 'Grant updated successfully' : 'Grant created successfully');
+      toast.success(
+        editingGrant
+          ? "Grant updated successfully"
+          : "Grant created successfully",
+      );
       onSuccess();
     } catch (error) {
-      console.error('Error saving grant:', error);
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to ${editingGrant ? 'update' : 'create'} grant: ${message}`);
+      console.error("Error saving grant:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(
+        `Failed to ${editingGrant ? "update" : "create"} grant: ${message}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -88,7 +108,9 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900">{editingGrant ? 'Edit Grant' : 'New Grant'}</h2>
+          <h2 className="text-xl font-bold text-slate-900">
+            {editingGrant ? "Edit Grant" : "New Grant"}
+          </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -99,7 +121,10 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label htmlFor="project_name" className="block text-sm font-medium text-slate-700 mb-2">
+            <label
+              htmlFor="project_name"
+              className="block text-sm font-medium text-slate-700 mb-2"
+            >
               Project Name
             </label>
             <input
@@ -107,7 +132,9 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               type="text"
               required
               value={formData.project_name}
-              onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, project_name: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
               placeholder="Enter project name"
             />
@@ -127,21 +154,28 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               min="0"
               step="0.01"
               value={formData.amount_approved}
-              onChange={(e) => setFormData({ ...formData, amount_approved: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, amount_approved: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
               placeholder="0.00"
             />
           </div>
 
           <div>
-            <label htmlFor="year_id" className="block text-sm font-medium text-slate-700 mb-2">
+            <label
+              htmlFor="year_id"
+              className="block text-sm font-medium text-slate-700 mb-2"
+            >
               Grant Year
             </label>
             <select
               id="year_id"
               required
               value={formData.year_id}
-              onChange={(e) => setFormData({ ...formData, year_id: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, year_id: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
             >
               <option value="">Select a year</option>
@@ -155,10 +189,13 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="fund_source_id" className="block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="fund_source_id"
+                className="block text-sm font-medium text-slate-700"
+              >
                 Fund Source
               </label>
-              {profile?.role === 'admin' && (
+              {profile?.role === "admin" && (
                 <Link
                   to="/grant-sources"
                   className="text-xs text-slate-500 hover:text-slate-700 underline"
@@ -171,7 +208,9 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               id="fund_source_id"
               required
               value={formData.fund_source_id}
-              onChange={(e) => setFormData({ ...formData, fund_source_id: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, fund_source_id: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
             >
               <option value="">Select a fund source</option>
@@ -184,14 +223,19 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
           </div>
 
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-slate-700 mb-2">
+            <label
+              htmlFor="status"
+              className="block text-sm font-medium text-slate-700 mb-2"
+            >
               Status
             </label>
             <select
               id="status"
               required
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, status: e.target.value })
+              }
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
             >
               <option value="approved">Approved</option>
@@ -213,7 +257,13 @@ export default function NewGrantModal({ onClose, onSuccess, editingGrant }: NewG
               disabled={loading}
               className="flex-1 px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (editingGrant ? 'Updating...' : 'Creating...') : (editingGrant ? 'Update Grant' : 'Create Grant')}
+              {loading
+                ? editingGrant
+                  ? "Updating..."
+                  : "Creating..."
+                : editingGrant
+                  ? "Update Grant"
+                  : "Create Grant"}
             </button>
           </div>
         </form>
