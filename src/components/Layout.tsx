@@ -28,14 +28,19 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Disbursements', path: '/disbursements', icon: DollarSign },
   ];
 
-  const navigation =
-    profile?.role === 'admin'
-      ? [
-          ...baseNavigation,
-          { name: 'Grant Sources', path: '/grant-sources', icon: Database },
-          { name: 'Team', path: '/team', icon: User },
-        ]
-      : baseNavigation;
+  const navigation = [...baseNavigation];
+
+  if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+    navigation.push({
+      name: 'Grant Sources',
+      path: '/grant-sources',
+      icon: Database,
+    });
+  }
+
+  if (profile?.role === 'super_admin') {
+    navigation.push({ name: 'Team', path: '/team', icon: User });
+  }
 
   const handleSignOut = async () => {
     try {
@@ -101,12 +106,16 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
             <span
               className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded ${
-                profile?.role === 'admin'
+                profile?.role === 'admin' || profile?.role === 'super_admin'
                   ? 'bg-emerald-500 text-white'
                   : 'bg-blue-700 text-blue-100'
               }`}
             >
-              {profile?.role === 'admin' ? 'Admin' : 'Staff'}
+              {profile?.role === 'super_admin'
+                ? 'Super Admin'
+                : profile?.role === 'admin'
+                  ? 'Admin'
+                  : 'Staff'}
             </span>
           </div>
           <div className="flex gap-2">
