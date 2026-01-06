@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Grants from './pages/Grants';
 import Disbursements from './pages/Disbursements';
 import GrantSources from './pages/GrantSources';
+import GrantYears from './pages/GrantYears';
 import Team from './pages/Team';
 import Profile from './pages/Profile';
 
@@ -60,6 +61,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <GrantSources />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grant-years"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SuperAdminGuard>
+                    <GrantYears />
+                  </SuperAdminGuard>
                 </Layout>
               </ProtectedRoute>
             }

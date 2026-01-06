@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Database,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -39,6 +40,7 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   if (profile?.role === 'super_admin') {
+    navigation.push({ name: 'Grant Years', path: '/grant-years', icon: Calendar });
     navigation.push({ name: 'Team', path: '/team', icon: User });
   }
 

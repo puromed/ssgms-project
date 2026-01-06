@@ -40,16 +40,19 @@ export interface Database {
         Row: {
           id: number;
           source_name: string;
+          description?: string | null;
           created_at: string;
         };
         Insert: {
           id?: number;
           source_name: string;
+          description?: string | null;
           created_at?: string;
         };
         Update: {
           id?: number;
           source_name?: string;
+          description?: string | null;
           created_at?: string;
         };
         Relationships: [];

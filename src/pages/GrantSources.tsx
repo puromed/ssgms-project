@@ -14,6 +14,7 @@ type GrantRow = Pick<Grant, 'fund_source_id' | 'amount_approved'>;
 interface GrantSourceRow {
   id: number;
   source_name: string;
+  description?: string | null;
   total_amount: number;
 }
 
@@ -57,6 +58,7 @@ export default function GrantSources() {
           .map((source) => ({
             id: source.id,
             source_name: source.source_name,
+            description: source.description,
             total_amount: totalBySourceId.get(source.id) || 0,
           }))
           .sort((a, b) => b.total_amount - a.total_amount),
@@ -144,13 +146,20 @@ export default function GrantSources() {
                 {rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-900">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getFundSourceBadgeClass(
-                          row.source_name,
-                        )}`}
-                      >
-                        {row.source_name}
-                      </span>
+                      <div className="flex flex-col">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${getFundSourceBadgeClass(
+                            row.source_name,
+                          )}`}
+                        >
+                          {row.source_name}
+                        </span>
+                        {row.description && (
+                          <span className="text-xs text-slate-500 mt-1 max-w-md truncate">
+                            {row.description}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-900 text-right">
                       {formatCurrency(row.total_amount)}
