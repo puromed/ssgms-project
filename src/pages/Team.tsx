@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Plus, Mail, CheckCircle, Clock, KeyRound, Copy, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import type { Profile as ProfileRow } from '../lib/types';
 import TableSkeleton from '../components/TableSkeleton';
 
 export default function Team() {
+  const { user } = useAuth();
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -217,6 +219,11 @@ export default function Team() {
                       const oldRole = profile.role;
 
                       if (newRole === oldRole) return;
+
+                      if (profile.id === user?.id) {
+                        toast.error('You cannot change your own role.');
+                        return;
+                      }
 
                       // Optimistic update
                       setProfiles((prev) =>
