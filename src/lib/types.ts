@@ -82,6 +82,9 @@ export interface Database {
           fund_source_id: number;
           created_at: string;
           user_id?: string | null;
+          document_url?: string | null;
+          document_name?: string | null;
+          document_uploaded_at?: string | null;
         };
         Insert: {
           id?: number;
@@ -92,6 +95,9 @@ export interface Database {
           fund_source_id: number;
           created_at?: string;
           user_id?: string | null;
+          document_url?: string | null;
+          document_name?: string | null;
+          document_uploaded_at?: string | null;
         };
         Update: {
           id?: number;
@@ -102,6 +108,9 @@ export interface Database {
           fund_source_id?: number;
           created_at?: string;
           user_id?: string | null;
+          document_url?: string | null;
+          document_name?: string | null;
+          document_uploaded_at?: string | null;
         };
         Relationships: [
           {

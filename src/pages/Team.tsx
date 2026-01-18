@@ -189,13 +189,14 @@ export default function Team() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-slate-900">Team Management</h1>
 
-      {/* Invite Form */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Mail className="w-5 h-5 text-blue-600" />
-          Invite New Member
-        </h2>
-        <form onSubmit={handleInvite} className="flex gap-4 items-end">
+      {/* Invite Form - Only visible to admin and super_admin */}
+      {(myProfile?.role === 'admin' || myProfile?.role === 'super_admin') && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Mail className="w-5 h-5 text-blue-600" />
+            Invite New Member
+          </h2>
+          <form onSubmit={handleInvite} className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
             <input
@@ -224,10 +225,11 @@ export default function Team() {
             className="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            {isInviting ? 'Sending...' : 'Send Invite'}
-          </button>
-        </form>
-      </div>
+              {isInviting ? 'Sending...' : 'Send Invite'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Team List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -250,6 +252,7 @@ export default function Team() {
                 <td className="px-6 py-4">
                   <select
                     value={profile.role}
+                    disabled={myProfile?.role !== 'super_admin'}
                     onChange={async (e) => {
                       const newRole = e.target.value as 'user' | 'admin' | 'super_admin';
                       const oldRole = profile.role;
@@ -303,16 +306,18 @@ export default function Team() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateResetLink(profile)}
-                    disabled={(profile.status ?? 'active') !== 'active' || isGeneratingLink}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-900 text-white hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={(profile.status ?? 'active') !== 'active' ? 'User must be active to reset password' : 'Generate a password reset link'}
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    Reset Password
-                  </button>
+                  {myProfile?.role === 'super_admin' && (
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateResetLink(profile)}
+                      disabled={(profile.status ?? 'active') !== 'active' || isGeneratingLink}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-900 text-white hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={(profile.status ?? 'active') !== 'active' ? 'User must be active to reset password' : 'Generate a password reset link'}
+                    >
+                      <KeyRound className="w-4 h-4" />
+                      Reset Password
+                    </button>
+                  )}
                   {myProfile?.role === 'super_admin' && (
                     <button
                       type="button"
