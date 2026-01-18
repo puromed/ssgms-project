@@ -69,9 +69,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <AdminGuard>
+                  <SuperAdminGuard>
                     <Team />
-                  </AdminGuard>
+                  </SuperAdminGuard>
                 </Layout>
               </ProtectedRoute>
             }
@@ -93,12 +93,13 @@ function App() {
   );
 }
 
-function AdminGuard({ children }: { children: ReactNode }) {
+
+function SuperAdminGuard({ children }: { children: ReactNode }) {
   const { profile, loading } = useAuth();
 
   if (loading) return null;
 
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'super_admin') {
     return <Navigate to="/" replace />;
   }
 

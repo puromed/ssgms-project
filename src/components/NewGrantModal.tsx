@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
-import type { FundSource, GrantYear, GrantWithRelations } from "../lib/types";
+import type { FundSource, GrantYear, GrantWithRelations, Database } from "../lib/types";
 import { useAuth } from "../contexts/AuthContext";
+import { uploadGrantDocument } from "../lib/fileUpload";
 
 interface NewGrantModalProps {
   onClose: () => void;
@@ -21,6 +22,7 @@ export default function NewGrantModal({
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
   const [grantYears, setGrantYears] = useState<GrantYear[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     project_name: "",
     amount_approved: "",
@@ -64,7 +66,7 @@ export default function NewGrantModal({
     setLoading(true);
 
     try {
-      const grantData = {
+      const grantData: Database['public']['Tables']['grants']['Insert'] = {
         project_name: formData.project_name,
         amount_approved: parseFloat(formData.amount_approved),
         status: formData.status,
@@ -76,15 +78,32 @@ export default function NewGrantModal({
         grantData.user_id = actorId;
       }
 
+      let grantId: number;
+
       if (editingGrant) {
         const { error } = await supabase
           .from("grants")
           .update(grantData)
           .eq("id", editingGrant.id);
         if (error) throw error;
+        grantId = editingGrant.id;
       } else {
-        const { error } = await supabase.from("grants").insert([grantData]);
+        const { data, error } = await supabase.from("grants").insert([grantData]).select();
         if (error) throw error;
+        grantId = data[0].id;
+      }
+
+      // Upload document if selected
+      if (selectedFile) {
+        const documentUrl = await uploadGrantDocument(selectedFile, grantId);
+        await supabase
+          .from("grants")
+          .update({
+            document_url: documentUrl,
+            document_name: selectedFile.name,
+            document_uploaded_at: new Date().toISOString(),
+          })
+          .eq("id", grantId);
       }
 
       toast.success(
@@ -242,6 +261,33 @@ export default function NewGrantModal({
               <option value="ongoing">Ongoing</option>
               <option value="completed">Completed</option>
             </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="document"
+              className="block text-sm font-medium text-slate-700 mb-2"
+            >
+              Grant Document (PDF)
+            </label>
+            <div className="relative">
+              <input
+                id="document"
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+              <label
+                htmlFor="document"
+                className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-900 hover:bg-slate-50 transition-colors"
+              >
+                <Upload className="w-5 h-5 text-slate-400 mr-2" />
+                <span className="text-sm text-slate-600">
+                  {selectedFile ? selectedFile.name : "Upload PDF document (optional)"}
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">

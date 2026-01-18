@@ -1,0 +1,16 @@
+{
+  "memory": {
+    "command": "C:\\Users\\newuser\\.local\\bin\\uvx.exe",
+    "args": [
+      "mcp-server-memory"
+    ],
+    "type": "stdio"
+  },
+  "fetch": {
+    "command": "C:\\Users\\newuser\\.local\\bin\\uvx.exe",
+    "args": [
+      "mcp-server-fetch"
+    ],
+    "type": "stdio"
+  }
+}

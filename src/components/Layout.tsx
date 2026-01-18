@@ -28,14 +28,19 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Disbursements', path: '/disbursements', icon: DollarSign },
   ];
 
-  const navigation =
-    profile?.role === 'admin'
-      ? [
-          ...baseNavigation,
-          { name: 'Grant Sources', path: '/grant-sources', icon: Database },
-          { name: 'Team', path: '/team', icon: User },
-        ]
-      : baseNavigation;
+  const navigation = [...baseNavigation];
+
+  if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+    navigation.push({
+      name: 'Grant Sources',
+      path: '/grant-sources',
+      icon: Database,
+    });
+  }
+
+  if (profile?.role === 'super_admin') {
+    navigation.push({ name: 'Team', path: '/team', icon: User });
+  }
 
   const handleSignOut = async () => {
     try {
@@ -48,7 +53,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-20 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">SSGMS</h1>
+        <img src="/7.png" alt="SSGMS Logo" className="h-20 w-auto max-w-full object-contain" />
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
@@ -62,9 +67,8 @@ export default function Layout({ children }: LayoutProps) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
       >
-        <div className="p-6 border-b border-blue-800">
-          <h1 className="text-xl font-bold">SSGMS</h1>
-          <p className="text-sm text-blue-200 mt-1">Grant Management</p>
+        <div className="p-4 border-b border-blue-800 flex justify-center">
+          <img src="/7.png" alt="SSGMS Logo" className="h-20 w-auto max-w-full object-contain" />
         </div>
 
         <nav className="p-4 space-y-2">
@@ -101,12 +105,16 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
             <span
               className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded ${
-                profile?.role === 'admin'
+                profile?.role === 'admin' || profile?.role === 'super_admin'
                   ? 'bg-emerald-500 text-white'
                   : 'bg-blue-700 text-blue-100'
               }`}
             >
-              {profile?.role === 'admin' ? 'Admin' : 'Staff'}
+              {profile?.role === 'super_admin'
+                ? 'Super Admin'
+                : profile?.role === 'admin'
+                  ? 'Admin'
+                  : 'Staff'}
             </span>
           </div>
           <div className="flex gap-2">
