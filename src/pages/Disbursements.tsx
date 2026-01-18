@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ChevronDown, FileDown } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../lib/utils";
 import type { GrantWithRelations, Disbursement } from "../lib/types";
 import NewDisbursementModal from "../components/NewDisbursementModal";
 import TableSkeleton from "../components/TableSkeleton";
+import { exportDisbursementsToPDF } from "../lib/pdfExport";
 
 export default function Disbursements() {
   const { profile } = useAuth();
@@ -88,6 +89,18 @@ export default function Disbursements() {
     setShowModal(false);
   };
 
+  const handleExportPDF = () => {
+    if (!selectedGrantData || !profile?.email) return;
+
+    exportDisbursementsToPDF({
+      grant: selectedGrantData,
+      disbursements,
+      totalDisbursed,
+      remainingBalance,
+      exportedBy: profile.email
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -116,15 +129,25 @@ export default function Disbursements() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-900">Disbursements</h1>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span>New Disbursement</span>
-          </button>
-        </div>
+        {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportPDF}
+              disabled={disbursements.length === 0}
+              className="flex items-center space-x-2 bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileDown className="w-5 h-5" />
+              <span>Export PDF</span>
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>New Disbursement</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
@@ -191,7 +214,7 @@ export default function Disbursements() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Amount
                 </th>
-                {profile?.role === "admin" && (
+                {profile?.role === "super_admin" && (
                   <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Actions
                   </th>
@@ -222,7 +245,7 @@ export default function Disbursements() {
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
                       {formatCurrency(disbursement.amount)}
                     </td>
-                    {profile?.role === "admin" && (
+                    {profile?.role === "super_admin" && (
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => handleDelete(disbursement.id)}

@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError) return json(500, { error: 'Failed to verify admin role' });
-    if (profile?.role !== 'admin') return json(403, { error: 'Forbidden' });
+    if (profile?.role !== 'super_admin') return json(403, { error: 'Forbidden: super_admin only' });
 
     const effectiveRedirectTo = redirectTo?.trim();
     const { data, error } = await adminClient.auth.admin.generateLink({

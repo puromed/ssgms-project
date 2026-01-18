@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Search, Download, Edit2 } from "lucide-react";
+import { Plus, Trash2, Search, Download, Edit2, FileText } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import {
   formatCurrency,
-  formatDate,
   getFundSourceBadgeClass,
 } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
@@ -299,16 +298,18 @@ export default function Grants() {
             <Download className="w-5 h-5" />
             <span>Export CSV</span>
           </button>
-          <button
-            onClick={() => {
-              setEditingGrant(null);
-              setShowModal(true);
-            }}
-            className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span>New Grant</span>
-          </button>
+          {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+            <button
+              onClick={() => {
+                setEditingGrant(null);
+                setShowModal(true);
+              }}
+              className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>New Grant</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -365,7 +366,8 @@ export default function Grants() {
               action={
                 !searchTerm &&
                 !selectedYear &&
-                !selectedFundSource && (
+                !selectedFundSource &&
+                (profile?.role === 'admin' || profile?.role === 'super_admin') && (
                   <button
                     onClick={() => {
                       setEditingGrant(null);
@@ -402,7 +404,10 @@ export default function Grants() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Last Updated By
                   </th>
-                  {profile?.role === "admin" && (
+                  <th className="text-center px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                    Document
+                  </th>
+                  {(profile?.role === "admin" || profile?.role === "super_admin") && (
                     <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Actions
                     </th>
@@ -474,7 +479,22 @@ export default function Grants() {
                         ? updatedByLookup[grant.user_id] || "Unknown"
                         : "N/A"}
                     </td>
-                    {profile?.role === "admin" && (
+                    <td className="px-6 py-4 text-center">
+                      {grant.document_url ? (
+                        <a
+                          href={grant.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex text-emerald-600 hover:text-emerald-800 transition-colors"
+                          title="View document"
+                        >
+                          <FileText className="w-5 h-5" />
+                        </a>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
+                      )}
+                    </td>
+                    {(profile?.role === "admin" || profile?.role === "super_admin") && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -484,13 +504,15 @@ export default function Grants() {
                           >
                             <Edit2 className="w-5 h-5" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(grant.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            title="Delete grant"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          {profile?.role === "super_admin" && (
+                            <button
+                              onClick={() => handleDelete(grant.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                              title="Delete grant"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
