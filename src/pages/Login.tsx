@@ -105,7 +105,7 @@ export default function Login() {
           {isRegistering ? 'Create Account' : 'Welcome Back'}
         </h1>
         <p className="text-center text-slate-600 mb-8">
-          State Grant Management System
+           GMS
         </p>
 
         {error && (
