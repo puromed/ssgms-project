@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 import type { FundSource, GrantYear, GrantWithRelations, Database } from "../lib/types";
 import { useAuth } from "../contexts/AuthContext";
 import { uploadGrantDocument } from "../lib/fileUpload";
+import { numClass } from "../lib/ui";
 
 interface NewGrantModalProps {
   onClose: () => void;
@@ -176,7 +177,7 @@ export default function NewGrantModal({
               onChange={(e) =>
                 setFormData({ ...formData, amount_approved: e.target.value })
               }
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+              className={`w-full px-4 py-2 border border-slate-300 rounded-lg ${numClass} focus:ring-2 focus:ring-blue-900 focus:border-transparent`}
               placeholder="0.00"
             />
           </div>
