@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { formatCurrency, getFundSourceBadgeClass } from '../lib/utils';
+import { numClass } from '../lib/ui';
 import type { FundSource, Grant } from '../lib/types';
 import { useAuth } from '../contexts/AuthContext';
 import EmptyState from '../components/EmptyState';
@@ -152,7 +153,7 @@ export default function GrantSources() {
                         {row.source_name}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-900 text-right">
+                    <td className={`px-6 py-4 text-sm font-semibold text-slate-900 ${numClass}`}>
                       {formatCurrency(row.total_amount)}
                     </td>
                     {profile?.role === 'super_admin' && (

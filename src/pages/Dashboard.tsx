@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { supabase } from "../lib/supabase";
 import { formatCurrency, formatDate } from "../lib/utils";
+import { numClass } from "../lib/ui";
 import type { Disbursement, Grant, GrantWithRelations } from "../lib/types";
 
 interface DashboardStats {
@@ -408,7 +409,7 @@ export default function Dashboard() {
           <h3 className="text-slate-600 text-sm font-medium mb-1">
             Total Budget (Approved + Ongoing)
           </h3>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className={`text-3xl font-bold text-slate-900 ${numClass}`}>
             {formatCurrency(stats.totalApproved)}
           </p>
         </Link>
@@ -422,7 +423,7 @@ export default function Dashboard() {
           <h3 className="text-slate-600 text-sm font-medium mb-1">
             Total Disbursed (Approved + Ongoing)
           </h3>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className={`text-3xl font-bold text-slate-900 ${numClass}`}>
             {formatCurrency(stats.totalDisbursed)}
           </p>
         </div>
@@ -436,7 +437,7 @@ export default function Dashboard() {
           <h3 className="text-slate-600 text-sm font-medium mb-1">
             Remaining Balance (Approved + Ongoing)
           </h3>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className={`text-3xl font-bold text-slate-900 ${numClass}`}>
             {formatCurrency(stats.remainingBalance)}
           </p>
         </div>
@@ -671,7 +672,7 @@ export default function Dashboard() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Project Name
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Amount
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
@@ -695,7 +696,7 @@ export default function Dashboard() {
                       <td className="px-6 py-4 text-sm font-medium text-slate-900">
                         {grant.project_name}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
+                      <td className={`px-6 py-4 text-sm text-slate-600 ${numClass}`}>
                         {formatCurrency(grant.amount_approved)}
                       </td>
                       <td className="px-6 py-4 text-sm">
@@ -735,7 +736,7 @@ export default function Dashboard() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Project Name
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Amount
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
@@ -761,7 +762,7 @@ export default function Dashboard() {
                           ? d.grants[0]?.project_name
                           : d.grants?.project_name) || "N/A"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
+                      <td className={`px-6 py-4 text-sm text-slate-600 ${numClass}`}>
                         {formatCurrency(d.amount)}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-500">

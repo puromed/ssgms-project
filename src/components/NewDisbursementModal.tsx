@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { numClass } from '../lib/ui';
 
 interface NewDisbursementModalProps {
   grantId: number;
@@ -101,7 +102,7 @@ export default function NewDisbursementModal({
               step="0.01"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+              className={`w-full px-4 py-2 border border-slate-300 rounded-lg ${numClass} focus:ring-2 focus:ring-blue-900 focus:border-transparent`}
               placeholder="0.00"
             />
           </div>

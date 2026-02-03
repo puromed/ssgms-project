@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ChevronDown, FileDown } from "lucide-react";
+import { Plus, Trash2, ChevronDown } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../lib/utils";
+import { numClass } from "../lib/ui";
 import type { GrantWithRelations, Disbursement } from "../lib/types";
 import NewDisbursementModal from "../components/NewDisbursementModal";
 import TableSkeleton from "../components/TableSkeleton";
-import { exportDisbursementsToPDF } from "../lib/pdfExport";
 
 export default function Disbursements() {
   const { profile } = useAuth();
@@ -89,18 +89,6 @@ export default function Disbursements() {
     setShowModal(false);
   };
 
-  const handleExportPDF = () => {
-    if (!selectedGrantData || !profile?.email) return;
-
-    exportDisbursementsToPDF({
-      grant: selectedGrantData,
-      disbursements,
-      totalDisbursed,
-      remainingBalance,
-      exportedBy: profile.email
-    });
-  };
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -131,14 +119,6 @@ export default function Disbursements() {
         <h1 className="text-3xl font-bold text-slate-900">Disbursements</h1>
         {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
           <div className="flex gap-3">
-            <button
-              onClick={handleExportPDF}
-              disabled={disbursements.length === 0}
-              className="flex items-center space-x-2 bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FileDown className="w-5 h-5" />
-              <span>Export PDF</span>
-            </button>
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
@@ -177,19 +157,19 @@ export default function Disbursements() {
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-slate-50 p-4 rounded-lg">
               <p className="text-sm text-slate-600 mb-1">Total Approved</p>
-              <p className="text-2xl font-bold text-slate-900">
+              <p className={`text-2xl font-bold text-slate-900 ${numClass}`}>
                 {formatCurrency(selectedGrantData.amount_approved)}
               </p>
             </div>
             <div className="bg-slate-50 p-4 rounded-lg">
               <p className="text-sm text-slate-600 mb-1">Total Disbursed</p>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className={`text-2xl font-bold text-blue-600 ${numClass}`}>
                 {formatCurrency(totalDisbursed)}
               </p>
             </div>
             <div className="bg-slate-50 p-4 rounded-lg">
               <p className="text-sm text-slate-600 mb-1">Remaining Balance</p>
-              <p className="text-2xl font-bold text-emerald-600">
+              <p className={`text-2xl font-bold text-emerald-600 ${numClass}`}>
                 {formatCurrency(remainingBalance)}
               </p>
             </div>
@@ -211,7 +191,7 @@ export default function Disbursements() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Payment Date
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Amount
                 </th>
                 {profile?.role === "super_admin" && (
@@ -225,7 +205,7 @@ export default function Disbursements() {
               {disbursements.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={profile?.role === "admin" ? 3 : 2}
+                    colSpan={profile?.role === "super_admin" ? 3 : 2}
                     className="px-6 py-12 text-center"
                   >
                     <p className="text-slate-500">
@@ -242,7 +222,7 @@ export default function Disbursements() {
                     <td className="px-6 py-4 text-sm text-slate-900">
                       {formatDate(disbursement.payment_date)}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                    <td className={`px-6 py-4 text-sm font-medium text-slate-900 ${numClass}`}>
                       {formatCurrency(disbursement.amount)}
                     </td>
                     {profile?.role === "super_admin" && (
