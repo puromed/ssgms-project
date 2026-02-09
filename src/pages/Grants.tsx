@@ -557,15 +557,14 @@ export default function Grants() {
                     <td className="px-6 py-4 text-sm">
                       {profile?.role !== "user" ? (
                         <span
-                          className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
-                            grant.status === "approved"
-                              ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20"
-                              : grant.status === "completed"
-                                ? "bg-blue-100 text-blue-800 ring-1 ring-blue-600/20"
-                                : grant.status === "ongoing"
-                                  ? "bg-orange-100 text-orange-800 ring-1 ring-orange-600/20"
-                                  : "bg-slate-100 text-slate-700 ring-1 ring-slate-600/20"
-                          }`}
+                          className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${grant.status === "approved"
+                            ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/20"
+                            : grant.status === "completed"
+                              ? "bg-blue-100 text-blue-800 ring-1 ring-blue-600/20"
+                              : grant.status === "ongoing"
+                                ? "bg-orange-100 text-orange-800 ring-1 ring-orange-600/20"
+                                : "bg-slate-100 text-slate-700 ring-1 ring-slate-600/20"
+                            }`}
                         >
                           {grant.status.charAt(0).toUpperCase() +
                             grant.status.slice(1)}
@@ -663,6 +662,7 @@ export default function Grants() {
         <DeletionLogModal
           title="Grant Deletion Log"
           logs={deletionLogs}
+          entityType="grant"
           deletedByLookup={deletedByLookup}
           isLoading={deletionLogsLoading}
           error={deletionLogsError}

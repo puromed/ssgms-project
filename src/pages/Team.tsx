@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Plus, Mail, CheckCircle, Clock, KeyRound, Copy, X, Trash2 } from 'lucide-react';
+import { Plus, Mail, CheckCircle, Clock, KeyRound, Copy, X, Trash2, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import type { Profile as ProfileRow } from '../lib/types';
+import type { Profile as ProfileRow, DeletionLog } from '../lib/types';
 import TableSkeleton from '../components/TableSkeleton';
 import DeleteReasonModal from '../components/DeleteReasonModal';
+import DeletionLogModal from '../components/DeletionLogModal';
 import { logDeletion } from '../lib/deletionAudit';
 
 export default function Team() {
@@ -22,6 +23,11 @@ export default function Team() {
   const [invitedEmail, setInvitedEmail] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeletionLogs, setShowDeletionLogs] = useState(false);
+  const [userDeletionLogs, setUserDeletionLogs] = useState<DeletionLog[]>([]);
+  const [deletionLogsLoading, setDeletionLogsLoading] = useState(false);
+  const [deletionLogsError, setDeletionLogsError] = useState<string | null>(null);
+  const [deletedByLookup, setDeletedByLookup] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchProfiles();
@@ -211,11 +217,83 @@ export default function Team() {
     }
   };
 
+  const syncDeletedByProfiles = async (rows: DeletionLog[]) => {
+    const deletedByIds = Array.from(
+      new Set(
+        rows
+          .map((log) => log.deleted_by)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    if (deletedByIds.length === 0) {
+      setDeletedByLookup({});
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', deletedByIds);
+
+      if (error) throw error;
+      const lookup =
+        data?.reduce<Record<string, string>>((acc, profileRow) => {
+          const displayName =
+            profileRow.full_name || profileRow.email || 'Unknown';
+          acc[profileRow.id] = displayName;
+          return acc;
+        }, {}) || {};
+      setDeletedByLookup(lookup);
+    } catch (error) {
+      console.error('Error fetching deleted by profiles:', error);
+    }
+  };
+
+  const fetchDeletionLogs = async () => {
+    setDeletionLogsLoading(true);
+    setDeletionLogsError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('deletion_logs')
+        .select('*')
+        .eq('entity_type', 'user')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      const rows = data || [];
+      setUserDeletionLogs(rows);
+      syncDeletedByProfiles(rows);
+    } catch (error) {
+      console.error('Error fetching deletion logs:', error);
+      setDeletionLogsError('Failed to load deletion logs.');
+    } finally {
+      setDeletionLogsLoading(false);
+    }
+  };
+
   if (loading) return <div className="p-8"><TableSkeleton rows={3} /></div>;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-900">Team Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-slate-900">Team Management</h1>
+        {(myProfile?.role === 'admin' || myProfile?.role === 'super_admin') && (
+          <button
+            onClick={() => {
+              setShowDeletionLogs(true);
+              fetchDeletionLogs();
+            }}
+            className="flex items-center space-x-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors"
+          >
+            <FileText className="w-5 h-5" />
+            <span>Deletion Log</span>
+          </button>
+        )}
+      </div>
 
       {/* Invite Form - Only visible to admin and super_admin */}
       {(myProfile?.role === 'admin' || myProfile?.role === 'super_admin') && (
@@ -225,34 +303,34 @@ export default function Team() {
             Invite New Member
           </h2>
           <form onSubmit={handleInvite} className="flex gap-4 items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-            <input
-              type="email"
-              required
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="colleague@ssgms.com"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900"
-            />
-          </div>
-          <div className="w-48">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value === 'admin' ? 'admin' : 'user')}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900"
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="colleague@ssgms.com"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div className="w-48">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value === 'admin' ? 'admin' : 'user')}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="user">Staff (User)</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={isInviting}
+              className="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2"
             >
-              <option value="user">Staff (User)</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            disabled={isInviting}
-            className="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
               {isInviting ? 'Sending...' : 'Send Invite'}
             </button>
           </form>
@@ -326,9 +404,8 @@ export default function Team() {
                   </select>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    profile.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${profile.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
                     {(profile.status ?? 'active') === 'active' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                     {(profile.status ?? 'active').toUpperCase()}
                   </span>
@@ -484,6 +561,19 @@ export default function Team() {
           onCancel={() => setDeleteTarget(null)}
           onConfirm={handleConfirmDeleteUser}
           isSubmitting={isDeleting}
+        />
+      )}
+
+      {showDeletionLogs && (
+        <DeletionLogModal
+          title="User Deletion Log"
+          logs={userDeletionLogs}
+          entityType="user"
+          deletedByLookup={deletedByLookup}
+          isLoading={deletionLogsLoading}
+          error={deletionLogsError}
+          onClose={() => setShowDeletionLogs(false)}
+          onRefresh={fetchDeletionLogs}
         />
       )}
     </div>

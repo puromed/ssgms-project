@@ -63,11 +63,11 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-blue-900 text-white transform transition-transform duration-200 ease-in-out z-30 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0`}
+        className={`fixed top-0 left-0 h-full w-64 text-white transform transition-transform duration-200 ease-in-out z-30 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:translate-x-0`}
+        style={{ backgroundColor: '#219ebc' }}
       >
-        <div className="p-4 border-b border-blue-800 flex justify-center">
+        <div className="p-4 border-b flex justify-center" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
           <img src="/7.png" alt="SSGMS Logo" className="h-20 w-auto max-w-full object-contain" />
         </div>
 
@@ -80,11 +80,10 @@ export default function Layout({ children }: LayoutProps) {
                 key={item.path}
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-blue-800 text-white'
-                    : 'text-blue-100 hover:bg-blue-800 hover:text-white'
-                }`}
+                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                  ? 'bg-black/10 text-white shadow-sm'
+                  : 'text-white/80 hover:bg-black/5 hover:text-white'
+                  }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.name}</span>
@@ -93,9 +92,9 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-blue-800">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
           <div className="mb-4 px-4">
-            <p className="text-sm text-blue-200">Logged in as</p>
+            <p className="text-sm text-white/70">Logged in as</p>
             <Link
               to="/profile"
               onClick={() => setSidebarOpen(false)}
@@ -104,11 +103,10 @@ export default function Layout({ children }: LayoutProps) {
               {profile?.email}
             </Link>
             <span
-              className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded ${
-                profile?.role === 'admin' || profile?.role === 'super_admin'
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-blue-700 text-blue-100'
-              }`}
+              className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded ${profile?.role === 'admin' || profile?.role === 'super_admin'
+                ? 'bg-emerald-500 text-white'
+                : 'bg-black/10 text-white'
+                }`}
             >
               {profile?.role === 'super_admin'
                 ? 'Super Admin'
@@ -121,14 +119,14 @@ export default function Layout({ children }: LayoutProps) {
             <Link
               to="/profile"
               onClick={() => setSidebarOpen(false)}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg bg-blue-800/60 text-blue-50 hover:bg-blue-800 transition-colors"
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg bg-black/10 text-white hover:bg-black/20 transition-colors"
             >
               <Settings className="w-5 h-5" />
               <span className="font-medium">Profile</span>
             </Link>
             <button
               onClick={handleSignOut}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors"
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-white/90 hover:bg-black/10 hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Sign Out</span>
