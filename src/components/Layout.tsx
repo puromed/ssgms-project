@@ -65,7 +65,7 @@ export default function Layout({ children }: LayoutProps) {
       <aside
         className={`fixed top-0 left-0 h-full w-64 text-white transform transition-transform duration-200 ease-in-out z-30 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } md:translate-x-0`}
-        style={{ backgroundColor: '#219ebc' }}
+        style={{ backgroundColor: '#121f4b' }}
       >
         <div className="p-4 border-b flex justify-center" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
           <img src="/7.png" alt="SSGMS Logo" className="h-20 w-auto max-w-full object-contain" />
