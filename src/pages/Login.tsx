@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 
 export default function Login() {
-  const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,119 +16,42 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isRegistering) {
-        await handleRegister();
-      } else {
-        await signIn(email, password);
-        navigate('/');
-      }
+      await signIn(email, password);
+      navigate('/');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to authenticate';
+      const message = err instanceof Error ? err.message : 'Failed to sign in';
       setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = async () => {
-    // 1. Check if invited
-    const { data: invite } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('email', email)
-      .eq('status', 'invited')
-      .maybeSingle();
-
-    if (!invite) {
-      throw new Error("This email is not authorized to register. Please contact an administrator.");
-    }
-
-    // 2. Sign Up (Create Auth User)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password
-    });
-
-    if (authError) throw authError;
-
-    // 3. Fix the Profile (The "Handshake")
-    if (authData.user) {
-      // Delete the placeholder invite row to avoid duplicate key error on ID if we were inserting fresh
-      // BUT Supabase Auth might have already created a profile trigger if you had one.
-      // Since we don't have a trigger, we manually manage this.
-
-      // First, delete the invite placeholder
-      const { error: deleteError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('email', email)
-        .eq('status', 'invited');
-
-      if (deleteError) {
-        console.error("Error removing invite placeholder:", deleteError);
-        // Continue anyway, as the auth user is created
-      }
-
-      // Insert the REAL profile linked to the new Auth ID
-      const { error: insertError } = await supabase.from('profiles').insert({
-        id: authData.user.id, // The REAL ID from Auth
-        email: email,
-        role: invite.role, // Copy role from invite
-        status: 'active',
-        full_name: invite.full_name || 'New Staff'
-      });
-
-      if (insertError) throw insertError;
-
-      // Navigate to dashboard
-      navigate('/');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div className="flex items-center justify-center mb-8">
-          <div className="bg-blue-900 p-3 rounded-xl">
-            {isRegistering ? (
-              <UserPlus className="w-8 h-8 text-white" />
-            ) : (
-              <LogIn className="w-8 h-8 text-white" />
-            )}
-          </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 md:p-8 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url('/bg-image.PNG')` }}
+    >
+      <div className="flex w-full max-w-5xl items-center gap-8 lg:gap-16">
+        {/* Left Side - Logo & Description */}
+        <div className="hidden lg:flex flex-col flex-1">
+          <img src="/7.png" alt="GMS Logo" className="w-56 mb-6" />
+          <p className="text-slate-700 text-sm leading-relaxed max-w-md">
+            Grant Management System (GMS) is an internal platform used to manage grant information,
+            funding sources, disbursements, and grant status in a structured and secure manner.
+          </p>
         </div>
 
-        <h1 className="text-3xl font-bold text-center text-slate-900 mb-2">
-          {isRegistering ? 'Create Account' : 'Welcome Back'}
-        </h1>
-        <p className="text-center text-slate-600 mb-8">
-          GMS
-        </p>
+        {/* Right Side - Login Card */}
+        <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 md:p-10">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+              {error}
+            </div>
+          )}
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
-              placeholder="you@example.com"
-            />
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="email" className="block text-xs font-medium text-slate-500 mb-1.5">
                 Email Address
               </label>
               <input
@@ -140,13 +60,13 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
-                placeholder="you@example.com"
+                className="w-full px-4 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ backgroundColor: '#dbeafe' }}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="password" className="block text-xs font-medium text-slate-500 mb-1.5">
                 Password
               </label>
               <input
@@ -155,67 +75,40 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
-                placeholder="Enter your password"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
-                placeholder="Enter your password"
+                className="w-full px-4 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ backgroundColor: '#dbeafe' }}
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-900 text-white py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-white py-3 rounded-full font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+              style={{ backgroundColor: '#1e3a5f' }}
             >
-              {loading ? (isRegistering ? 'Creating Account...' : 'Signing in...') : (isRegistering ? 'Register' : 'Sign In')}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-900 text-white py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (isRegistering ? 'Creating Account...' : 'Signing in...') : (isRegistering ? 'Register' : 'Sign In')}
-          </button>
-        </form>
 
-        {!isRegistering && (
-          <div className="mt-4 text-center">
-            <Link to="/forgot-password" className="text-sm text-blue-900 hover:text-blue-700 font-medium">
-              {!isRegistering && (
-                <div className="mt-4 text-center">
-                  <Link to="/forgot-password" className="text-sm text-blue-900 hover:text-blue-700 font-medium">
-                    Forgot password?
-                  </Link>
-                </div>
-              )}
+          {/* Footer Links */}
+          <div className="mt-8 text-center space-y-3">
+            <Link to="/forgot-password" className="block text-xs text-slate-500 hover:text-slate-700">
+              Forgot password?
+            </Link>
+            <p className="text-xs text-slate-400">Grant Management System</p>
 
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => {
-                    setIsRegistering(!isRegistering);
-                    setError('');
-                  }}
-                  className="text-sm text-blue-900 hover:text-blue-700 font-medium"
-                >
-                  {isRegistering
-                    ? 'Already have an account? Sign in'
-                    : 'Need an account? Register with invite'}
-                </button>
-              </div>
+            {/* Access Information */}
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-xs text-slate-500">
+                Don't have an account?
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Access is by invitation only. Please contact your administrator to request access.
+              </p>
+            </div>
           </div>
+        </div>
+      </div>
     </div>
-      );
+  );
 }
