@@ -7,11 +7,15 @@ import {
   formatCurrency,
   getFundSourceBadgeClass,
 } from "../lib/utils";
+import { logDeletion } from "../lib/deletionAudit";
+import { numClass } from "../lib/ui";
 import { useAuth } from "../contexts/AuthContext";
-import type { GrantWithRelations, FundSource, GrantYear } from "../lib/types";
+import type { DeletionLog, GrantWithRelations, FundSource, GrantYear } from "../lib/types";
 import NewGrantModal from "../components/NewGrantModal";
 import EmptyState from "../components/EmptyState";
 import TableSkeleton from "../components/TableSkeleton";
+import DeleteReasonModal from "../components/DeleteReasonModal";
+import DeletionLogModal from "../components/DeletionLogModal";
 
 const MAX_PROJECT_NAME = 24;
 const STATUS_OPTIONS = [
@@ -40,6 +44,17 @@ export default function Grants() {
   const [editingGrant, setEditingGrant] = useState<GrantWithRelations | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<GrantWithRelations | null>(
+    null,
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeletionLogs, setShowDeletionLogs] = useState(false);
+  const [deletionLogs, setDeletionLogs] = useState<DeletionLog[]>([]);
+  const [deletionLogsLoading, setDeletionLogsLoading] = useState(false);
+  const [deletionLogsError, setDeletionLogsError] = useState<string | null>(null);
+  const [deletedByLookup, setDeletedByLookup] = useState<
+    Record<string, string>
+  >({});
   const [updatedByLookup, setUpdatedByLookup] = useState<
     Record<string, string>
   >({});
@@ -101,6 +116,40 @@ export default function Grants() {
     }
   };
 
+  const syncDeletedByProfiles = async (rows: DeletionLog[]) => {
+    const deletedByIds = Array.from(
+      new Set(
+        rows
+          .map((log) => log.deleted_by)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (deletedByIds.length === 0) {
+      setDeletedByLookup({});
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", deletedByIds);
+
+      if (error) throw error;
+      const lookup =
+        data?.reduce<Record<string, string>>((acc, profileRow) => {
+          const displayName =
+            profileRow.full_name || profileRow.email || "Unknown";
+          acc[profileRow.id] = displayName;
+          return acc;
+        }, {}) || {};
+      setDeletedByLookup(lookup);
+    } catch (error) {
+      console.error("Error fetching deleted by profiles:", error);
+    }
+  };
+
   const fetchGrants = async () => {
     try {
       const { data, error } = await supabase
@@ -116,6 +165,30 @@ export default function Grants() {
       console.error("Error fetching grants:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeletionLogs = async () => {
+    setDeletionLogsLoading(true);
+    setDeletionLogsError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("deletion_logs")
+        .select("*")
+        .eq("entity_type", "grant")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      const rows = data || [];
+      setDeletionLogs(rows);
+      syncDeletedByProfiles(rows);
+    } catch (error) {
+      console.error("Error fetching deletion logs:", error);
+      setDeletionLogsError("Failed to load deletion logs.");
+    } finally {
+      setDeletionLogsLoading(false);
     }
   };
 
@@ -136,17 +209,45 @@ export default function Grants() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this grant?")) return;
+  const handleConfirmDelete = async (reason: string) => {
+    const target = deleteTarget;
+    if (!target) return;
+    setIsDeleting(true);
+    const actorId = user?.id ?? profile?.id ?? null;
 
     try {
-      const { error } = await supabase.from("grants").delete().eq("id", id);
+      const { error } = await supabase.from("grants").delete().eq("id", target.id);
       if (error) throw error;
-      setGrants(grants.filter((grant) => grant.id !== id));
+
+      setGrants((prev) => prev.filter((grant) => grant.id !== target.id));
+
+      const logged = await logDeletion({
+        entityType: "grant",
+        entityId: target.id,
+        entityLabel: target.project_name,
+        reason,
+        deletedBy: actorId,
+        metadata: {
+          projectName: target.project_name,
+          amountApproved: target.amount_approved,
+          fundSource: target.fund_sources?.source_name ?? null,
+          year: target.grant_years?.year_value ?? null,
+          status: target.status,
+        },
+      });
+
       toast.success("Grant deleted successfully");
+      if (!logged) {
+        toast("Deletion reason could not be recorded. Check audit log setup.", {
+          icon: "!",
+        });
+      }
     } catch (error) {
       console.error("Error deleting grant:", error);
       toast.error("Failed to delete grant");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -298,6 +399,18 @@ export default function Grants() {
             <Download className="w-5 h-5" />
             <span>Export CSV</span>
           </button>
+          {(profile?.role === "admin" || profile?.role === "super_admin") && (
+            <button
+              onClick={() => {
+                setShowDeletionLogs(true);
+                fetchDeletionLogs();
+              }}
+              className="flex items-center space-x-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              <FileText className="w-5 h-5" />
+              <span>Deletion Log</span>
+            </button>
+          )}
           {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
             <button
               onClick={() => {
@@ -389,7 +502,7 @@ export default function Grants() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Project Name
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  <th className="text-right px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                     Amount Approved
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
@@ -426,7 +539,7 @@ export default function Grants() {
                     >
                       {truncateLabel(grant.project_name, MAX_PROJECT_NAME)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className={`px-6 py-4 text-sm text-slate-600 ${numClass}`}>
                       {formatCurrency(grant.amount_approved)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
@@ -506,7 +619,7 @@ export default function Grants() {
                           </button>
                           {profile?.role === "super_admin" && (
                             <button
-                              onClick={() => handleDelete(grant.id)}
+                              onClick={() => setDeleteTarget(grant)}
                               className="text-red-600 hover:text-red-800 transition-colors"
                               title="Delete grant"
                             >
@@ -532,6 +645,29 @@ export default function Grants() {
           }}
           onSuccess={handleGrantCreated}
           editingGrant={editingGrant}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteReasonModal
+          title="Delete grant?"
+          description={`Provide a reason for deleting "${deleteTarget.project_name}". This action cannot be undone.`}
+          confirmLabel="Delete Grant"
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
+          isSubmitting={isDeleting}
+        />
+      )}
+
+      {showDeletionLogs && (
+        <DeletionLogModal
+          title="Grant Deletion Log"
+          logs={deletionLogs}
+          deletedByLookup={deletedByLookup}
+          isLoading={deletionLogsLoading}
+          error={deletionLogsError}
+          onClose={() => setShowDeletionLogs(false)}
+          onRefresh={fetchDeletionLogs}
         />
       )}
     </div>

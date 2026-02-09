@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Profile as ProfileRow } from '../lib/types';
 import TableSkeleton from '../components/TableSkeleton';
+import DeleteReasonModal from '../components/DeleteReasonModal';
+import { logDeletion } from '../lib/deletionAudit';
 
 export default function Team() {
   const { user, profile: myProfile } = useAuth();
@@ -18,6 +20,8 @@ export default function Team() {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [invitedEmail, setInvitedEmail] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
@@ -93,34 +97,58 @@ export default function Team() {
     }
   };
 
-  const handleDeleteUser = async (profile: ProfileRow) => {
-    if (!confirm(`Are you sure you want to delete ${profile.email}? This action cannot be undone.`)) {
-      return;
-    }
+  const handleConfirmDeleteUser = async (reason: string) => {
+    const target = deleteTarget;
+    if (!target) return;
+    setIsDeleting(true);
+    const actorId = user?.id ?? myProfile?.id ?? null;
 
     try {
       // 1. Delete from public.profiles (will cascade if configured, or fail if restricted)
       // Since we need to delete from auth.users, we should use an RPC or Edge Function.
       // However, for rows that are just "invited" (no auth user yet), we can just delete from profiles.
 
-      if (profile.status === 'invited') {
-        const { error } = await supabase.from('profiles').delete().eq('id', profile.id);
+      if (target.status === 'invited') {
+        const { error } = await supabase.from('profiles').delete().eq('id', target.id);
         if (error) throw error;
-        toast.success('Invitation cancelled');
       } else {
         // Use the Edge Function to delete from auth.users
         const { error } = await supabase.functions.invoke('admin-delete-user', {
-          body: { userId: profile.id },
+          body: { userId: target.id, reason },
         });
-        
+
         if (error) throw error;
-        toast.success('User deleted successfully');
       }
 
-      setProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+      setProfiles((prev) => prev.filter((p) => p.id !== target.id));
+
+      const logged = await logDeletion({
+        entityType: 'user',
+        entityId: target.id,
+        entityLabel: target.email,
+        reason,
+        deletedBy: actorId,
+        metadata: {
+          email: target.email,
+          role: target.role,
+          status: target.status ?? 'active',
+        },
+      });
+
+      const successMessage =
+        target.status === 'invited' ? 'Invitation cancelled' : 'User deleted successfully';
+      toast.success(successMessage);
+      if (!logged) {
+        toast('Deletion reason could not be recorded. Check audit log setup.', {
+          icon: '⚠️',
+        });
+      }
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Failed to delete user');
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -321,7 +349,7 @@ export default function Team() {
                   {myProfile?.role === 'super_admin' && (
                     <button
                       type="button"
-                      onClick={() => handleDeleteUser(profile)}
+                      onClick={() => setDeleteTarget(profile)}
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 ml-2"
                       title="Delete User"
                     >
@@ -446,6 +474,17 @@ export default function Team() {
             </div>
           </div>
         </div>
+      )}
+
+      {deleteTarget && (
+        <DeleteReasonModal
+          title="Delete user?"
+          description={`Provide a reason for deleting ${deleteTarget.email}. This action cannot be undone.`}
+          confirmLabel="Delete User"
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDeleteUser}
+          isSubmitting={isDeleting}
+        />
       )}
     </div>
   );

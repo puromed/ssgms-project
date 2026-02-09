@@ -127,6 +127,39 @@ export interface Database {
           },
         ];
       };
+      deletion_logs: {
+        Row: {
+          id: number;
+          entity_type: string;
+          entity_id: string;
+          entity_label?: string | null;
+          reason: string;
+          deleted_by?: string | null;
+          metadata?: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          entity_type: string;
+          entity_id: string;
+          entity_label?: string | null;
+          reason: string;
+          deleted_by?: string | null;
+          metadata?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          entity_type?: string;
+          entity_id?: string;
+          entity_label?: string | null;
+          reason?: string;
+          deleted_by?: string | null;
+          metadata?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       disbursements: {
         Row: {
           id: number;
@@ -178,6 +211,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type FundSource = Database["public"]["Tables"]["fund_sources"]["Row"];
 export type GrantYear = Database["public"]["Tables"]["grant_years"]["Row"];
 export type Grant = Database["public"]["Tables"]["grants"]["Row"];
+export type DeletionLog = Database["public"]["Tables"]["deletion_logs"]["Row"];
 export type Disbursement = Database["public"]["Tables"]["disbursements"]["Row"];
 
 export interface GrantWithRelations extends Grant {

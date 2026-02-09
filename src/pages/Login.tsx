@@ -41,58 +41,62 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Right Side - Login Card */}
-        <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 md:p-10">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
+        <h1 className="text-3xl font-bold text-center text-slate-900 mb-2">
+          {isRegistering ? 'Create Account' : 'Welcome Back'}
+        </h1>
+        <p className="text-center text-slate-600 mb-8">
+           GMS
+        </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium text-slate-500 mb-1.5">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ backgroundColor: '#dbeafe' }}
-              />
-            </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
 
-            <div>
-              <label htmlFor="password" className="block text-xs font-medium text-slate-500 mb-1.5">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ backgroundColor: '#dbeafe' }}
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
+              placeholder="you@example.com"
+            />
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full text-white py-3 rounded-full font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ backgroundColor: '#1e3a5f' }}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
+              placeholder="Enter your password"
+            />
+          </div>
 
-          {/* Footer Links */}
-          <div className="mt-8 text-center space-y-3">
-            <Link to="/forgot-password" className="block text-xs text-slate-500 hover:text-slate-700">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-900 text-white py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (isRegistering ? 'Creating Account...' : 'Signing in...') : (isRegistering ? 'Register' : 'Sign In')}
+          </button>
+        </form>
+
+        {!isRegistering && (
+          <div className="mt-4 text-center">
+            <Link to="/forgot-password" className="text-sm text-blue-900 hover:text-blue-700 font-medium">
               Forgot password?
             </Link>
             <p className="text-xs text-slate-400">Grant Management System</p>
