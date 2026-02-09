@@ -106,7 +106,7 @@ export default function Grants() {
       const lookup =
         data?.reduce<Record<string, string>>((acc, profileRow) => {
           const displayName =
-            profileRow.full_name || profileRow.email || "Unknown";
+            profileRow.email || profileRow.full_name || "Unknown";
           acc[profileRow.id] = displayName;
           return acc;
         }, {}) || {};
