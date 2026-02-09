@@ -35,7 +35,7 @@ export default function Login() {
         {/* Left Side - Logo & Description */}
         <div className="hidden lg:flex flex-col flex-1">
           <img src="/7.png" alt="GMS Logo" className="w-56 mb-6" />
-          <p className="text-slate-700 text-sm leading-relaxed max-w-md">
+          <p className="text-sm leading-relaxed max-w-md" style={{ color: '#0096c7' }}>
             Grant Management System (GMS) is an internal platform used to manage grant information,
             funding sources, disbursements, and grant status in a structured and secure manner.
           </p>
