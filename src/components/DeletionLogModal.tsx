@@ -4,6 +4,7 @@ import type { DeletionLog } from "../lib/types";
 interface DeletionLogModalProps {
   title: string;
   logs: DeletionLog[];
+  entityType: "grant" | "user";
   deletedByLookup: Record<string, string>;
   isLoading: boolean;
   error?: string | null;
@@ -14,12 +15,15 @@ interface DeletionLogModalProps {
 export default function DeletionLogModal({
   title,
   logs,
+  entityType,
   deletedByLookup,
   isLoading,
   error,
   onClose,
   onRefresh,
 }: DeletionLogModalProps) {
+  const entityLabel = entityType === "grant" ? "Grant" : "User Email";
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden">
@@ -27,7 +31,7 @@ export default function DeletionLogModal({
           <div>
             <h2 className="text-lg font-bold text-slate-900">{title}</h2>
             <p className="text-sm text-slate-600 mt-1">
-              Recent deletion activity for grants.
+              Recent deletion activity.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -78,7 +82,7 @@ export default function DeletionLogModal({
                       Date
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Grant
+                      {entityLabel}
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Reason
@@ -95,7 +99,10 @@ export default function DeletionLogModal({
                         {new Date(log.created_at).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-900">
-                        {log.entity_label || (log.metadata as { projectName?: string } | null)?.projectName || "Unknown"}
+                        {log.entity_label ||
+                          (log.metadata as { projectName?: string; email?: string } | null)?.projectName ||
+                          (log.metadata as { projectName?: string; email?: string } | null)?.email ||
+                          "Unknown"}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-700 max-w-md">
                         {log.reason}
